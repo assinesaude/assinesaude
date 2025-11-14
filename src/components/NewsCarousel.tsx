@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+          import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 
 interface NewsArticle {
@@ -21,12 +21,35 @@ export function NewsCarousel() {
     fetchNews();
   }, []);
 
+  useEffect(() => {
+    if (articles.length <= 1) return;
+
+    const timer = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % articles.length);
+    }, 8000);
+
+    return () => clearInterval(timer);
+  }, [articles.length]);
+
   const fetchNews = async () => {
     try {
+      // First, trigger sync to update latest news
+      await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sync-health-news`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+        }
+      ).catch(() => {}); // Ignore errors from sync
+
+      // Then fetch from database
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-health-news`,
+        `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/news_highlights?is_active=eq.true&order=display_order.asc`,
         {
           headers: {
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
             'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           },
         }
@@ -35,7 +58,20 @@ export function NewsCarousel() {
       if (!response.ok) throw new Error('Failed to fetch news');
 
       const data = await response.json();
-      setArticles(data.articles || []);
+
+      // Transform database records to NewsArticle format
+      const newsArticles = data.map((item: any) => ({
+        title: item.title,
+        titlePt: item.title,
+        description: item.subtitle,
+        descriptionPt: item.subtitle,
+        image: item.image_url,
+        url: item.article_url,
+        publishedAt: item.created_at,
+        source: item.source || 'healthnews',
+      }));
+
+      setArticles(newsArticles);
     } catch (error) {
       console.error('Error fetching news:', error);
     } finally {
