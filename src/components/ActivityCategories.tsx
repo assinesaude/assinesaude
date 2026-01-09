@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface Category {
   id: string;
@@ -10,20 +11,49 @@ interface Category {
 
 const ActivityCategories = () => {
   const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchCategories = async () => {
-      const { data } = await supabase
-        .from('activity_categories')
-        .select('*')
-        .eq('is_active', true)
-        .order('display_order');
-      
-      if (data) setCategories(data);
+      try {
+        const { data, error } = await supabase
+          .from('activity_categories' as any)
+          .select('id, name, icon_url, display_order')
+          .eq('is_active', true)
+          .order('display_order');
+        
+        if (error) {
+          console.error('Error fetching categories:', error);
+          return;
+        }
+        
+        if (data) setCategories(data as unknown as Category[]);
+      } catch (error) {
+        console.error('Error:', error);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     fetchCategories();
   }, []);
+
+  if (isLoading) {
+    return (
+      <section className="py-12">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-wrap justify-center gap-6 md:gap-10">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="flex flex-col items-center gap-3">
+                <Skeleton className="w-24 h-24 rounded-full" />
+                <Skeleton className="w-16 h-4" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   if (categories.length === 0) return null;
 
