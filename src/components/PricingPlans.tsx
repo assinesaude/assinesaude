@@ -3,8 +3,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { CheckCircle, Tag, Loader2 } from 'lucide-react';
+import { CheckCircle, Tag, Loader2, X, Check, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface PlatformPlan {
   id: string;
@@ -13,6 +15,13 @@ interface PlatformPlan {
   price: number;
   features: string[];
   is_free: boolean;
+}
+
+interface ValidCoupon {
+  code: string;
+  discountType: 'percentage' | 'fixed';
+  discountValue: number;
+  description: string | null;
 }
 
 interface PricingPlansProps {
@@ -25,19 +34,33 @@ interface PricingPlansProps {
 const ANNUAL_DISCOUNT = 0.26; // 26% discount
 
 const PricingPlans = ({ plans, onSubscribe, loading, currentPlanId }: PricingPlansProps) => {
+  const { toast } = useToast();
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
   const [couponCode, setCouponCode] = useState('');
   const [showCouponInput, setShowCouponInput] = useState(false);
+  const [validatingCoupon, setValidatingCoupon] = useState(false);
+  const [validatedCoupon, setValidatedCoupon] = useState<ValidCoupon | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
 
   const getAnnualPrice = (monthlyPrice: number) => {
     const annualTotal = monthlyPrice * 12;
     const discountedTotal = annualTotal * (1 - ANNUAL_DISCOUNT);
-    return discountedTotal / 12; // Show monthly equivalent
+    return discountedTotal / 12;
   };
 
   const getAnnualSavings = (monthlyPrice: number) => {
     const annualTotal = monthlyPrice * 12;
     return annualTotal * ANNUAL_DISCOUNT;
+  };
+
+  const applyDiscountToPrice = (price: number) => {
+    if (!validatedCoupon) return price;
+    
+    if (validatedCoupon.discountType === 'percentage') {
+      return price * (1 - validatedCoupon.discountValue / 100);
+    } else {
+      return Math.max(0, price - validatedCoupon.discountValue);
+    }
   };
 
   const formatPrice = (price: number) => {
@@ -47,12 +70,69 @@ const PricingPlans = ({ plans, onSubscribe, loading, currentPlanId }: PricingPla
     }).format(price);
   };
 
+  const validateCoupon = async () => {
+    if (!couponCode.trim()) {
+      setCouponError('Digite um código de cupom');
+      return;
+    }
+
+    setValidatingCoupon(true);
+    setCouponError(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('validate-coupon', {
+        body: { 
+          code: couponCode.trim(),
+          targetAudience: 'professionals'
+        },
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (data.valid) {
+        setValidatedCoupon(data.coupon);
+        toast({
+          title: 'Cupom aplicado!',
+          description: data.coupon.discountType === 'percentage' 
+            ? `Desconto de ${data.coupon.discountValue}% aplicado`
+            : `Desconto de R$ ${formatPrice(data.coupon.discountValue)} aplicado`,
+        });
+      } else {
+        setCouponError(data.error || 'Cupom inválido');
+        setValidatedCoupon(null);
+      }
+    } catch (error: any) {
+      console.error('Error validating coupon:', error);
+      setCouponError('Erro ao validar cupom. Tente novamente.');
+      setValidatedCoupon(null);
+    } finally {
+      setValidatingCoupon(false);
+    }
+  };
+
+  const removeCoupon = () => {
+    setValidatedCoupon(null);
+    setCouponCode('');
+    setCouponError(null);
+  };
+
+  const getDiscountLabel = () => {
+    if (!validatedCoupon) return null;
+    
+    if (validatedCoupon.discountType === 'percentage') {
+      return `-${validatedCoupon.discountValue}%`;
+    } else {
+      return `-R$ ${formatPrice(validatedCoupon.discountValue)}`;
+    }
+  };
+
   return (
     <div className="space-y-8">
       {/* Billing Toggle */}
       <div className="flex flex-col items-center gap-4">
         <div className="relative inline-flex items-center p-1 bg-muted rounded-full">
-          {/* Background slider */}
           <div
             className={cn(
               "absolute h-[calc(100%-8px)] top-1 rounded-full bg-primary transition-all duration-300 ease-out",
@@ -107,9 +187,12 @@ const PricingPlans = ({ plans, onSubscribe, loading, currentPlanId }: PricingPla
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {plans.filter(plan => !plan.is_free).map((plan, index) => {
           const isCurrentPlan = plan.id === currentPlanId;
-          const displayPrice = billingCycle === 'annual' ? getAnnualPrice(plan.price) : plan.price;
+          let displayPrice = billingCycle === 'annual' ? getAnnualPrice(plan.price) : plan.price;
+          const originalPrice = displayPrice;
+          displayPrice = applyDiscountToPrice(displayPrice);
           const annualSavings = getAnnualSavings(plan.price);
-          const isPopular = index === 1; // Middle plan is popular
+          const isPopular = index === 1;
+          const hasCouponDiscount = validatedCoupon && originalPrice !== displayPrice;
 
           return (
             <Card 
@@ -146,21 +229,37 @@ const PricingPlans = ({ plans, onSubscribe, loading, currentPlanId }: PricingPla
                     <span className="text-muted-foreground">/mês</span>
                   </div>
                   
+                  {/* Show original price if coupon applied */}
+                  {hasCouponDiscount && (
+                    <p className="text-sm text-muted-foreground line-through">
+                      R$ {formatPrice(originalPrice)}/mês
+                    </p>
+                  )}
+                  
+                  {billingCycle === 'annual' && !hasCouponDiscount && (
+                    <p className="text-sm text-muted-foreground line-through">
+                      R$ {formatPrice(plan.price)}/mês
+                    </p>
+                  )}
+
+                  {/* Coupon discount badge */}
+                  {hasCouponDiscount && (
+                    <Badge className="bg-green-500 text-white hover:bg-green-500 animate-fade-in">
+                      <Tag className="w-3 h-3 mr-1" />
+                      Cupom {getDiscountLabel()}
+                    </Badge>
+                  )}
+                  
                   {billingCycle === 'annual' && (
-                    <div className="space-y-1">
-                      <p className="text-sm text-muted-foreground line-through">
-                        R$ {formatPrice(plan.price)}/mês
-                      </p>
-                      <p className="text-sm font-semibold text-green-600 dark:text-green-400 flex items-center gap-1 animate-fade-in">
-                        <CheckCircle className="w-4 h-4" />
-                        Economize R$ {formatPrice(annualSavings)}/ano
-                      </p>
-                    </div>
+                    <p className="text-sm font-semibold text-green-600 dark:text-green-400 flex items-center gap-1 animate-fade-in">
+                      <CheckCircle className="w-4 h-4" />
+                      Economize R$ {formatPrice(annualSavings)}/ano
+                    </p>
                   )}
 
                   {billingCycle === 'annual' && (
                     <p className="text-xs text-muted-foreground">
-                      Cobrado R$ {formatPrice(displayPrice * 12)} anualmente
+                      Cobrado R$ {formatPrice(applyDiscountToPrice(getAnnualPrice(plan.price)) * 12)} anualmente
                     </p>
                   )}
                 </div>
@@ -180,7 +279,7 @@ const PricingPlans = ({ plans, onSubscribe, loading, currentPlanId }: PricingPla
                   className="w-full" 
                   variant={isCurrentPlan ? 'outline' : (isPopular ? 'default' : 'outline')}
                   disabled={isCurrentPlan || loading}
-                  onClick={() => onSubscribe?.(plan.id, billingCycle, couponCode || undefined)}
+                  onClick={() => onSubscribe?.(plan.id, billingCycle, validatedCoupon?.code)}
                 >
                   {loading ? (
                     <>
@@ -212,7 +311,31 @@ const PricingPlans = ({ plans, onSubscribe, loading, currentPlanId }: PricingPla
 
       {/* Coupon Section */}
       <div className="flex flex-col items-center gap-3 pt-4 border-t">
-        {!showCouponInput ? (
+        {validatedCoupon ? (
+          <div className="flex items-center gap-3 px-4 py-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg animate-fade-in">
+            <Check className="w-5 h-5 text-green-600" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-green-700 dark:text-green-400">
+                Cupom <span className="font-bold">{validatedCoupon.code}</span> aplicado!
+              </p>
+              <p className="text-xs text-green-600 dark:text-green-500">
+                {validatedCoupon.discountType === 'percentage' 
+                  ? `${validatedCoupon.discountValue}% de desconto`
+                  : `R$ ${formatPrice(validatedCoupon.discountValue)} de desconto`
+                }
+                {validatedCoupon.description && ` - ${validatedCoupon.description}`}
+              </p>
+            </div>
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={removeCoupon}
+              className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-100"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        ) : !showCouponInput ? (
           <Button 
             variant="ghost" 
             size="sm"
@@ -223,31 +346,58 @@ const PricingPlans = ({ plans, onSubscribe, loading, currentPlanId }: PricingPla
             Tem um cupom de desconto?
           </Button>
         ) : (
-          <div className="flex items-center gap-2 animate-fade-in w-full max-w-xs">
-            <Input
-              placeholder="Digite seu cupom"
-              value={couponCode}
-              onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-              className="uppercase"
-            />
-            <Button 
-              variant="secondary" 
-              size="sm"
-              onClick={() => {
-                if (!couponCode) {
+          <div className="space-y-2 animate-fade-in w-full max-w-sm">
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder="Digite seu cupom"
+                value={couponCode}
+                onChange={(e) => {
+                  setCouponCode(e.target.value.toUpperCase());
+                  setCouponError(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    validateCoupon();
+                  }
+                }}
+                className={cn(
+                  "uppercase",
+                  couponError && "border-destructive focus-visible:ring-destructive"
+                )}
+                maxLength={20}
+              />
+              <Button 
+                variant="secondary" 
+                onClick={validateCoupon}
+                disabled={validatingCoupon}
+              >
+                {validatingCoupon ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  'Aplicar'
+                )}
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={() => {
                   setShowCouponInput(false);
-                }
-              }}
-            >
-              {couponCode ? 'Aplicar' : 'Fechar'}
-            </Button>
+                  setCouponCode('');
+                  setCouponError(null);
+                }}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            
+            {couponError && (
+              <p className="text-sm text-destructive flex items-center gap-1 animate-fade-in">
+                <AlertCircle className="w-4 h-4" />
+                {couponError}
+              </p>
+            )}
           </div>
-        )}
-        
-        {couponCode && (
-          <p className="text-sm text-muted-foreground animate-fade-in">
-            Cupom <span className="font-semibold text-primary">{couponCode}</span> será aplicado na assinatura
-          </p>
         )}
       </div>
     </div>
