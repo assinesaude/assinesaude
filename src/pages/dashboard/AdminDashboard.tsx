@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { LogOut, Users, CheckCircle, XCircle, Eye, Package, Briefcase, MessageSquare, Ticket, Edit, Trash2, Plus } from 'lucide-react';
+import { LogOut, Users, CheckCircle, XCircle, Eye, Package, Briefcase, MessageSquare, Ticket, Edit, Trash2, Plus, Grid3X3 } from 'lucide-react';
 import logoAssinesaude from '@/assets/logo-assinesaude.png';
 import {
   Dialog,
@@ -25,6 +25,7 @@ import { Switch } from '@/components/ui/switch';
 import ProfessionsManager from '@/components/admin/ProfessionsManager';
 import MessagesManager from '@/components/admin/MessagesManager';
 import CouponsManager from '@/components/admin/CouponsManager';
+import CategoriesManager from '@/components/admin/CategoriesManager';
 
 interface ProfessionalProfile {
   id: string;
@@ -328,6 +329,7 @@ const AdminDashboard = () => {
             <TabsTrigger value="pending">Pendentes ({pendingProfessionals.length})</TabsTrigger>
             <TabsTrigger value="approved">Aprovados</TabsTrigger>
             <TabsTrigger value="professions"><Briefcase className="w-4 h-4 mr-1" />Profissões</TabsTrigger>
+            <TabsTrigger value="categories"><Grid3X3 className="w-4 h-4 mr-1" />Vetores</TabsTrigger>
             <TabsTrigger value="messages"><MessageSquare className="w-4 h-4 mr-1" />Mensagens</TabsTrigger>
             <TabsTrigger value="coupons"><Ticket className="w-4 h-4 mr-1" />Cupons</TabsTrigger>
             <TabsTrigger value="plans">Planos B2B</TabsTrigger>
@@ -428,6 +430,10 @@ const AdminDashboard = () => {
 
           <TabsContent value="professions">
             <ProfessionsManager />
+          </TabsContent>
+
+          <TabsContent value="categories">
+            <CategoriesManager />
           </TabsContent>
 
           <TabsContent value="messages">
