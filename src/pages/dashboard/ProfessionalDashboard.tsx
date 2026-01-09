@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { LogOut, Clock, CheckCircle, AlertCircle, Plus, Package, Ticket } from 'lucide-react';
+import { LogOut, Clock, CheckCircle, AlertCircle, Plus, Package, Ticket, Sparkles } from 'lucide-react';
 import logoAssinesaude from '@/assets/logo-assinesaude.png';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,6 +18,7 @@ interface ProfessionalProfile {
   id: string;
   full_name: string;
   specialty: string;
+  clinic_name: string | null;
   approval_status: 'pending' | 'approved' | 'rejected';
   rejection_reason: string | null;
 }
@@ -40,6 +41,13 @@ interface PlatformPlan {
   is_free: boolean;
 }
 
+interface AISuggestion {
+  title: string;
+  description: string;
+  price: number;
+  duration_minutes: number;
+}
+
 const ProfessionalDashboard = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -48,6 +56,8 @@ const ProfessionalDashboard = () => {
   const [offerings, setOfferings] = useState<ServiceOffering[]>([]);
   const [plans, setPlans] = useState<PlatformPlan[]>([]);
   const [loading, setLoading] = useState(true);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<AISuggestion[]>([]);
   
   const [newOffering, setNewOffering] = useState({
     title: '',
@@ -136,6 +146,40 @@ const ProfessionalDashboard = () => {
       });
       setNewOffering({ title: '', description: '', price: '', duration: '' });
       fetchData();
+    }
+  };
+
+  const handleAISuggestions = async () => {
+    if (!profile) return;
+    
+    setAiLoading(true);
+    try {
+      const response = await supabase.functions.invoke('ai-suggest-offerings', {
+        body: {
+          specialty: profile.specialty,
+          clinicName: profile.clinic_name,
+        },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      if (response.data?.offerings) {
+        setAiSuggestions(response.data.offerings);
+        toast({
+          title: 'Sugestões geradas!',
+          description: 'Clique em uma sugestão para usá-la como base.',
+        });
+      }
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao gerar sugestões',
+        description: error.message || 'Tente novamente mais tarde.',
+      });
+    } finally {
+      setAiLoading(false);
     }
   };
 
@@ -229,6 +273,78 @@ const ProfessionalDashboard = () => {
 
           <TabsContent value="offerings">
             <div className="space-y-6">
+              {/* AI Suggestion Button */}
+              {isApproved && (
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="flex items-center gap-2">
+                          <Sparkles className="w-5 h-5 text-primary" />
+                          Assistente IA
+                        </CardTitle>
+                        <CardDescription>
+                          Use inteligência artificial para criar ofertas de serviços
+                        </CardDescription>
+                      </div>
+                      <Button 
+                        onClick={handleAISuggestions} 
+                        disabled={aiLoading}
+                        variant="outline"
+                      >
+                        {aiLoading ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-primary mr-2"></div>
+                            Gerando...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-4 h-4 mr-2" />
+                            Gerar Sugestões com IA
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  {aiSuggestions.length > 0 && (
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Sugestões geradas pela IA. Clique em uma para usar como base:
+                      </p>
+                      <div className="grid md:grid-cols-3 gap-4">
+                        {aiSuggestions.map((suggestion, index) => (
+                          <Card 
+                            key={index} 
+                            className="cursor-pointer hover:border-primary transition-colors"
+                            onClick={() => {
+                              setNewOffering({
+                                title: suggestion.title,
+                                description: suggestion.description,
+                                price: suggestion.price.toString(),
+                                duration: suggestion.duration_minutes.toString(),
+                              });
+                              setAiSuggestions([]);
+                              toast({ title: "Sugestão aplicada!", description: "Revise e ajuste os dados conforme necessário." });
+                            }}
+                          >
+                            <CardHeader className="p-4">
+                              <CardTitle className="text-sm">{suggestion.title}</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-4 pt-0">
+                              <p className="text-xs text-muted-foreground mb-2 line-clamp-2">{suggestion.description}</p>
+                              <div className="flex justify-between text-xs">
+                                <span className="font-semibold">R$ {suggestion.price.toFixed(2)}</span>
+                                <span>{suggestion.duration_minutes} min</span>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </CardContent>
+                  )}
+                </Card>
+              )}
+
               {/* Create new offering */}
               {isApproved && (
                 <Card>
@@ -329,6 +445,18 @@ const ProfessionalDashboard = () => {
                 </div>
               )}
             </div>
+          </TabsContent>
+
+          <TabsContent value="coupons">
+            {profile ? (
+              <CouponsManager creatorType="professional" professionalId={profile.id} />
+            ) : (
+              <Card>
+                <CardContent className="py-12 text-center text-muted-foreground">
+                  Carregando...
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           <TabsContent value="plans">
