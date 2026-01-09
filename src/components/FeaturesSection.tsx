@@ -3,33 +3,33 @@ import { Shield, Clock, Users, Sparkles, CreditCard, HeartPulse } from "lucide-r
 const features = [
   {
     icon: HeartPulse,
-    title: "Cuidado Personalizado",
-    description: "Planos de benefícios criados sob medida por cada profissional de saúde"
+    title: "Cadastro Gratuito",
+    description: "Profissionais de saúde se cadastram sem custo e começam a criar planos imediatamente"
   },
   {
     icon: Shield,
-    title: "Segurança Total",
-    description: "Contratos digitais com biometria facial e assinatura eletrônica"
+    title: "Verificação Profissional",
+    description: "Selo de confiança com validação de documentos e registro em conselhos"
   },
   {
     icon: Clock,
-    title: "Atendimento Ágil",
-    description: "Agendamento online e gestão completa de consultas"
+    title: "Autonomia Total",
+    description: "Defina seus próprios preços, serviços e condições de atendimento"
   },
   {
     icon: Users,
-    title: "Rede Verificada",
-    description: "Profissionais com selo de verificação e documentação validada"
+    title: "Fidelização de Pacientes",
+    description: "CRM integrado para gestão de relacionamento e retenção de pacientes"
   },
   {
     icon: CreditCard,
-    title: "Pagamento Flexível",
-    description: "Diversas formas de pagamento: cartão, PIX e boleto"
+    title: "Receita Recorrente",
+    description: "Planos de assinatura garantem fluxo de caixa previsível todo mês"
   },
   {
     icon: Sparkles,
-    title: "Experiência Premium",
-    description: "Interface intuitiva para gestão de toda sua saúde"
+    title: "Dashboard Profissional",
+    description: "Relatórios financeiros, agenda e métricas de desempenho em tempo real"
   }
 ];
 

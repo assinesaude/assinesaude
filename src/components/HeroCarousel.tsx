@@ -7,18 +7,18 @@ import hero3 from "@/assets/hero-3.jpg";
 const slides = [
   {
     image: hero1,
-    title: "Cuidado Personalizado",
-    subtitle: "Conectando você aos melhores profissionais de saúde"
+    title: "Crie Seus Planos de Benefícios",
+    subtitle: "Médicos, dentistas e profissionais de saúde: cadastre-se grátis e aumente sua renda"
   },
   {
     image: hero2,
-    title: "Tecnologia Premium",
-    subtitle: "Gestão completa de benefícios na palma da sua mão"
+    title: "Gestão Completa do Consultório",
+    subtitle: "Dashboard inteligente, CRM de pacientes e relatórios financeiros em um só lugar"
   },
   {
     image: hero3,
-    title: "Bem-Estar & Saúde",
-    subtitle: "Ambiente acolhedor para seu atendimento"
+    title: "Fidelize Seus Pacientes",
+    subtitle: "Ofereça planos personalizados e construa relacionamentos duradouros"
   }
 ];
 
