@@ -7,20 +7,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { LogOut, Clock, CheckCircle, AlertCircle, Plus, Package } from 'lucide-react';
+import { LogOut, Clock, CheckCircle, AlertCircle, Plus, Package, Ticket } from 'lucide-react';
 import logoAssinesaude from '@/assets/logo-assinesaude.png';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import CouponsManager from '@/components/admin/CouponsManager';
 
 interface ProfessionalProfile {
   id: string;
@@ -231,6 +223,7 @@ const ProfessionalDashboard = () => {
         <Tabs defaultValue="offerings" className="space-y-6">
           <TabsList>
             <TabsTrigger value="offerings">Minhas Ofertas</TabsTrigger>
+            <TabsTrigger value="coupons"><Ticket className="w-4 h-4 mr-1" />Meus Cupons</TabsTrigger>
             <TabsTrigger value="plans">Planos da Plataforma</TabsTrigger>
           </TabsList>
 

@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { LogOut, Users, CheckCircle, XCircle, Eye, Package, DollarSign } from 'lucide-react';
+import { LogOut, Users, CheckCircle, XCircle, Eye, Package, Briefcase, MessageSquare, Ticket } from 'lucide-react';
 import logoAssinesaude from '@/assets/logo-assinesaude.png';
 import {
   Dialog,
@@ -21,6 +21,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import ProfessionsManager from '@/components/admin/ProfessionsManager';
+import MessagesManager from '@/components/admin/MessagesManager';
+import CouponsManager from '@/components/admin/CouponsManager';
 
 interface ProfessionalProfile {
   id: string;
@@ -61,7 +64,6 @@ const AdminDashboard = () => {
   const [selectedProfessional, setSelectedProfessional] = useState<ProfessionalProfile | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   
-  // New plan form state
   const [newPlan, setNewPlan] = useState({
     name: '',
     description: '',
@@ -76,31 +78,23 @@ const AdminDashboard = () => {
   const fetchData = async () => {
     setLoading(true);
     
-    // Fetch pending professionals
-    const { data: profData, error: profError } = await supabase
+    const { data: profData } = await supabase
       .from('professional_profiles')
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (profError) {
-      console.error('Error fetching professionals:', profError);
-    } else {
-      setProfessionals(profData || []);
-    }
+    if (profData) setProfessionals(profData);
 
-    // Fetch platform plans
-    const { data: planData, error: planError } = await supabase
+    const { data: planData } = await supabase
       .from('platform_plans')
       .select('*')
       .order('price', { ascending: true });
 
-    if (planError) {
-      console.error('Error fetching plans:', planError);
-    } else {
-      setPlans(planData?.map(p => ({
+    if (planData) {
+      setPlans(planData.map(p => ({
         ...p,
         features: Array.isArray(p.features) ? p.features : JSON.parse(p.features as string || '[]')
-      })) || []);
+      })));
     }
 
     setLoading(false);
@@ -117,16 +111,9 @@ const AdminDashboard = () => {
       .eq('id', professional.id);
 
     if (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Erro',
-        description: 'Não foi possível aprovar o profissional.',
-      });
+      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível aprovar.' });
     } else {
-      toast({
-        title: 'Aprovado!',
-        description: `${professional.full_name} foi aprovado e suas ofertas de serviços estão públicas.`,
-      });
+      toast({ title: 'Aprovado!', description: `${professional.full_name} foi aprovado.` });
       fetchData();
     }
   };
@@ -143,16 +130,9 @@ const AdminDashboard = () => {
       .eq('id', selectedProfessional.id);
 
     if (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Erro',
-        description: 'Não foi possível rejeitar o profissional.',
-      });
+      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível rejeitar.' });
     } else {
-      toast({
-        title: 'Rejeitado',
-        description: `${selectedProfessional.full_name} foi rejeitado.`,
-      });
+      toast({ title: 'Rejeitado', description: `${selectedProfessional.full_name} foi rejeitado.` });
       setSelectedProfessional(null);
       setRejectionReason('');
       fetchData();
@@ -161,30 +141,20 @@ const AdminDashboard = () => {
 
   const handleCreatePlan = async (e: React.FormEvent) => {
     e.preventDefault();
-
     const features = newPlan.features.split('\n').filter(f => f.trim());
 
-    const { error } = await supabase
-      .from('platform_plans')
-      .insert({
-        name: newPlan.name,
-        description: newPlan.description,
-        price: parseFloat(newPlan.price) || 0,
-        features: features,
-        is_free: parseFloat(newPlan.price) === 0,
-      });
+    const { error } = await supabase.from('platform_plans').insert({
+      name: newPlan.name,
+      description: newPlan.description,
+      price: parseFloat(newPlan.price) || 0,
+      features: features,
+      is_free: parseFloat(newPlan.price) === 0,
+    });
 
     if (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Erro',
-        description: 'Não foi possível criar o plano.',
-      });
+      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível criar o plano.' });
     } else {
-      toast({
-        title: 'Plano criado!',
-        description: `O plano ${newPlan.name} foi criado com sucesso.`,
-      });
+      toast({ title: 'Plano criado!', description: `O plano ${newPlan.name} foi criado.` });
       setNewPlan({ name: '', description: '', price: '', features: '' });
       fetchData();
     }
@@ -200,7 +170,6 @@ const AdminDashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="bg-card border-b border-border">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -214,12 +183,10 @@ const AdminDashboard = () => {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-8">Dashboard Administrativo</h1>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
@@ -227,7 +194,6 @@ const AdminDashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{pendingProfessionals.length}</div>
-              <p className="text-xs text-muted-foreground">Profissionais aguardando aprovação</p>
             </CardContent>
           </Card>
           <Card>
@@ -237,7 +203,6 @@ const AdminDashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{approvedProfessionals.length}</div>
-              <p className="text-xs text-muted-foreground">Profissionais ativos</p>
             </CardContent>
           </Card>
           <Card>
@@ -247,17 +212,17 @@ const AdminDashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{plans.length}</div>
-              <p className="text-xs text-muted-foreground">Planos de serviços ativos</p>
             </CardContent>
           </Card>
         </div>
 
         <Tabs defaultValue="pending" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="pending">
-              Pendentes ({pendingProfessionals.length})
-            </TabsTrigger>
+          <TabsList className="flex-wrap h-auto gap-2">
+            <TabsTrigger value="pending">Pendentes ({pendingProfessionals.length})</TabsTrigger>
             <TabsTrigger value="approved">Aprovados</TabsTrigger>
+            <TabsTrigger value="professions"><Briefcase className="w-4 h-4 mr-1" />Profissões</TabsTrigger>
+            <TabsTrigger value="messages"><MessageSquare className="w-4 h-4 mr-1" />Mensagens</TabsTrigger>
+            <TabsTrigger value="coupons"><Ticket className="w-4 h-4 mr-1" />Cupons</TabsTrigger>
             <TabsTrigger value="plans">Planos B2B</TabsTrigger>
           </TabsList>
 
@@ -265,11 +230,7 @@ const AdminDashboard = () => {
             {loading ? (
               <div className="text-center py-12">Carregando...</div>
             ) : pendingProfessionals.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center text-muted-foreground">
-                  Nenhum profissional pendente de aprovação
-                </CardContent>
-              </Card>
+              <Card><CardContent className="py-12 text-center text-muted-foreground">Nenhum profissional pendente</CardContent></Card>
             ) : (
               <div className="space-y-4">
                 {pendingProfessionals.map((professional) => (
@@ -278,99 +239,54 @@ const AdminDashboard = () => {
                       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div className="space-y-1">
                           <h3 className="font-semibold text-lg">{professional.full_name}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            {professional.specialty} • {professional.professional_registration}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {professional.city}, {professional.state}
-                          </p>
+                          <p className="text-sm text-muted-foreground">{professional.specialty} • {professional.professional_registration}</p>
+                          <p className="text-sm text-muted-foreground">{professional.city}, {professional.state}</p>
                         </div>
                         <div className="flex gap-2">
                           <Dialog>
                             <DialogTrigger asChild>
-                              <Button variant="outline" size="sm">
-                                <Eye className="w-4 h-4 mr-2" />
-                                Ver Documentos
-                              </Button>
+                              <Button variant="outline" size="sm"><Eye className="w-4 h-4 mr-2" />Ver Documentos</Button>
                             </DialogTrigger>
                             <DialogContent className="max-w-2xl">
                               <DialogHeader>
                                 <DialogTitle>Documentos de {professional.full_name}</DialogTitle>
-                                <DialogDescription>
-                                  Verifique os documentos enviados pelo profissional
-                                </DialogDescription>
                               </DialogHeader>
                               <div className="grid grid-cols-2 gap-4 py-4">
                                 <div>
                                   <p className="text-sm font-medium mb-2">Frente</p>
                                   {professional.document_front_url ? (
-                                    <img
-                                      src={professional.document_front_url}
-                                      alt="Frente do documento"
-                                      className="w-full rounded-lg border"
-                                    />
+                                    <img src={professional.document_front_url} alt="Frente" className="w-full rounded-lg border" />
                                   ) : (
-                                    <div className="bg-muted rounded-lg p-8 text-center text-sm text-muted-foreground">
-                                      Documento não enviado
-                                    </div>
+                                    <div className="bg-muted rounded-lg p-8 text-center text-sm">Não enviado</div>
                                   )}
                                 </div>
                                 <div>
                                   <p className="text-sm font-medium mb-2">Verso</p>
                                   {professional.document_back_url ? (
-                                    <img
-                                      src={professional.document_back_url}
-                                      alt="Verso do documento"
-                                      className="w-full rounded-lg border"
-                                    />
+                                    <img src={professional.document_back_url} alt="Verso" className="w-full rounded-lg border" />
                                   ) : (
-                                    <div className="bg-muted rounded-lg p-8 text-center text-sm text-muted-foreground">
-                                      Documento não enviado
-                                    </div>
+                                    <div className="bg-muted rounded-lg p-8 text-center text-sm">Não enviado</div>
                                   )}
                                 </div>
                               </div>
                             </DialogContent>
                           </Dialog>
-                          <Button
-                            size="sm"
-                            onClick={() => handleApprove(professional)}
-                          >
-                            <CheckCircle className="w-4 h-4 mr-2" />
-                            Aprovar
-                          </Button>
+                          <Button size="sm" onClick={() => handleApprove(professional)}><CheckCircle className="w-4 h-4 mr-2" />Aprovar</Button>
                           <Dialog>
                             <DialogTrigger asChild>
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => setSelectedProfessional(professional)}
-                              >
-                                <XCircle className="w-4 h-4 mr-2" />
-                                Rejeitar
-                              </Button>
+                              <Button variant="destructive" size="sm" onClick={() => setSelectedProfessional(professional)}><XCircle className="w-4 h-4 mr-2" />Rejeitar</Button>
                             </DialogTrigger>
                             <DialogContent>
                               <DialogHeader>
                                 <DialogTitle>Rejeitar Profissional</DialogTitle>
-                                <DialogDescription>
-                                  Informe o motivo da rejeição para {professional.full_name}
-                                </DialogDescription>
+                                <DialogDescription>Informe o motivo da rejeição</DialogDescription>
                               </DialogHeader>
                               <div className="py-4">
-                                <Label htmlFor="reason">Motivo da rejeição</Label>
-                                <Textarea
-                                  id="reason"
-                                  value={rejectionReason}
-                                  onChange={(e) => setRejectionReason(e.target.value)}
-                                  placeholder="Descreva o motivo..."
-                                  className="mt-2"
-                                />
+                                <Label>Motivo</Label>
+                                <Textarea value={rejectionReason} onChange={(e) => setRejectionReason(e.target.value)} className="mt-2" />
                               </div>
                               <DialogFooter>
-                                <Button variant="destructive" onClick={handleReject}>
-                                  Confirmar Rejeição
-                                </Button>
+                                <Button variant="destructive" onClick={handleReject}>Confirmar</Button>
                               </DialogFooter>
                             </DialogContent>
                           </Dialog>
@@ -385,25 +301,17 @@ const AdminDashboard = () => {
 
           <TabsContent value="approved">
             {approvedProfessionals.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center text-muted-foreground">
-                  Nenhum profissional aprovado ainda
-                </CardContent>
-              </Card>
+              <Card><CardContent className="py-12 text-center text-muted-foreground">Nenhum profissional aprovado</CardContent></Card>
             ) : (
               <div className="space-y-4">
                 {approvedProfessionals.map((professional) => (
                   <Card key={professional.id}>
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-1">
-                          <h3 className="font-semibold">{professional.full_name}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            {professional.specialty} • {professional.professional_registration}
-                          </p>
-                        </div>
-                        <Badge variant="default">Ativo</Badge>
+                    <CardContent className="p-6 flex items-center justify-between">
+                      <div>
+                        <h3 className="font-semibold">{professional.full_name}</h3>
+                        <p className="text-sm text-muted-foreground">{professional.specialty}</p>
                       </div>
+                      <Badge>Ativo</Badge>
                     </CardContent>
                   </Card>
                 ))}
@@ -411,95 +319,47 @@ const AdminDashboard = () => {
             )}
           </TabsContent>
 
-          <TabsContent value="plans">
-            <div className="grid gap-6">
-              {/* Create new plan */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Criar Novo Plano B2B</CardTitle>
-                  <CardDescription>
-                    Defina os planos de serviços da plataforma para profissionais
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleCreatePlan} className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="planName">Nome do Plano</Label>
-                        <Input
-                          id="planName"
-                          value={newPlan.name}
-                          onChange={(e) => setNewPlan({ ...newPlan, name: e.target.value })}
-                          placeholder="Ex: Plano Profissional"
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="planPrice">Preço Mensal (R$)</Label>
-                        <Input
-                          id="planPrice"
-                          type="number"
-                          step="0.01"
-                          value={newPlan.price}
-                          onChange={(e) => setNewPlan({ ...newPlan, price: e.target.value })}
-                          placeholder="0.00"
-                          required
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="planDesc">Descrição</Label>
-                      <Input
-                        id="planDesc"
-                        value={newPlan.description}
-                        onChange={(e) => setNewPlan({ ...newPlan, description: e.target.value })}
-                        placeholder="Descrição do plano"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="planFeatures">Recursos (um por linha)</Label>
-                      <Textarea
-                        id="planFeatures"
-                        value={newPlan.features}
-                        onChange={(e) => setNewPlan({ ...newPlan, features: e.target.value })}
-                        placeholder="Recurso 1&#10;Recurso 2&#10;Recurso 3"
-                        rows={4}
-                      />
-                    </div>
-                    <Button type="submit">Criar Plano</Button>
-                  </form>
-                </CardContent>
-              </Card>
+          <TabsContent value="professions">
+            <ProfessionsManager />
+          </TabsContent>
 
-              {/* Existing plans */}
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {plans.map((plan) => (
-                  <Card key={plan.id} className={plan.is_free ? 'border-primary' : ''}>
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg">{plan.name}</CardTitle>
-                        {plan.is_free && <Badge>Gratuito</Badge>}
-                      </div>
-                      <CardDescription>{plan.description}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-3xl font-bold mb-4">
-                        R$ {plan.price.toFixed(2)}
-                        <span className="text-sm font-normal text-muted-foreground">/mês</span>
-                      </div>
-                      <ul className="space-y-2">
-                        {plan.features.map((feature, index) => (
-                          <li key={index} className="flex items-center gap-2 text-sm">
-                            <CheckCircle className="w-4 h-4 text-primary" />
-                            {feature}
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
+          <TabsContent value="messages">
+            <MessagesManager />
+          </TabsContent>
+
+          <TabsContent value="coupons">
+            <CouponsManager creatorType="admin" />
+          </TabsContent>
+
+          <TabsContent value="plans">
+            <Card>
+              <CardHeader>
+                <CardTitle>Criar Novo Plano B2B</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleCreatePlan} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Nome</Label>
+                      <Input value={newPlan.name} onChange={(e) => setNewPlan({ ...newPlan, name: e.target.value })} required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Preço (R$)</Label>
+                      <Input type="number" step="0.01" value={newPlan.price} onChange={(e) => setNewPlan({ ...newPlan, price: e.target.value })} required />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Descrição</Label>
+                    <Textarea value={newPlan.description} onChange={(e) => setNewPlan({ ...newPlan, description: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Recursos (um por linha)</Label>
+                    <Textarea value={newPlan.features} onChange={(e) => setNewPlan({ ...newPlan, features: e.target.value })} rows={4} />
+                  </div>
+                  <Button type="submit">Criar Plano</Button>
+                </form>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </main>

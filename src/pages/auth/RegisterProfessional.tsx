@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,43 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '@/hooks/use-toast';
 import logoAssinesaude from '@/assets/logo-assinesaude.png';
 import { ArrowLeft, Upload, FileCheck } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
+interface Profession {
+  id: string;
+  name: string;
+}
+
+interface Council {
+  id: string;
+  name: string;
+  abbreviation: string;
+  profession_id: string;
+}
+
+interface Specialty {
+  id: string;
+  name: string;
+  profession_id: string;
+}
+
+interface BrazilianState {
+  id: string;
+  name: string;
+  abbreviation: string;
+}
+
+interface BrazilianCity {
+  id: string;
+  name: string;
+  state_id: string;
+}
 
 const RegisterProfessional = () => {
   const [formData, setFormData] = useState({
@@ -17,18 +54,97 @@ const RegisterProfessional = () => {
     fullName: '',
     cpf: '',
     professionalRegistration: '',
-    specialty: '',
     phone: '',
     clinicName: '',
     clinicAddress: '',
-    city: '',
-    state: '',
+    zipCode: '',
   });
+  
+  const [selectedProfession, setSelectedProfession] = useState('');
+  const [selectedCouncil, setSelectedCouncil] = useState('');
+  const [selectedSpecialty, setSelectedSpecialty] = useState('');
+  const [selectedState, setSelectedState] = useState('');
+  const [selectedCity, setSelectedCity] = useState('');
+
+  const [professions, setProfessions] = useState<Profession[]>([]);
+  const [councils, setCouncils] = useState<Council[]>([]);
+  const [specialties, setSpecialties] = useState<Specialty[]>([]);
+  const [states, setStates] = useState<BrazilianState[]>([]);
+  const [cities, setCities] = useState<BrazilianCity[]>([]);
+
   const [documentFront, setDocumentFront] = useState<File | null>(null);
   const [documentBack, setDocumentBack] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Fetch initial data
+  useEffect(() => {
+    const fetchData = async () => {
+      const [professionsRes, statesRes] = await Promise.all([
+        supabase.from('professions').select('*').eq('is_active', true).order('name'),
+        supabase.from('brazilian_states').select('*').order('name'),
+      ]);
+
+      if (professionsRes.data) setProfessions(professionsRes.data);
+      if (statesRes.data) setStates(statesRes.data);
+    };
+
+    fetchData();
+  }, []);
+
+  // Fetch councils and specialties when profession changes
+  useEffect(() => {
+    const fetchProfessionData = async () => {
+      if (!selectedProfession) {
+        setCouncils([]);
+        setSpecialties([]);
+        setSelectedCouncil('');
+        setSelectedSpecialty('');
+        return;
+      }
+
+      const [councilsRes, specialtiesRes] = await Promise.all([
+        supabase.from('professional_councils').select('*').eq('profession_id', selectedProfession).eq('is_active', true),
+        supabase.from('specialties').select('*').eq('profession_id', selectedProfession).eq('is_active', true).order('name'),
+      ]);
+
+      if (councilsRes.data) setCouncils(councilsRes.data);
+      if (specialtiesRes.data) setSpecialties(specialtiesRes.data);
+      
+      // Auto-select council if there's only one
+      if (councilsRes.data?.length === 1) {
+        setSelectedCouncil(councilsRes.data[0].id);
+      } else {
+        setSelectedCouncil('');
+      }
+      setSelectedSpecialty('');
+    };
+
+    fetchProfessionData();
+  }, [selectedProfession]);
+
+  // Fetch cities when state changes
+  useEffect(() => {
+    const fetchCities = async () => {
+      if (!selectedState) {
+        setCities([]);
+        setSelectedCity('');
+        return;
+      }
+
+      const { data } = await supabase
+        .from('brazilian_cities')
+        .select('*')
+        .eq('state_id', selectedState)
+        .order('name');
+
+      if (data) setCities(data);
+      setSelectedCity('');
+    };
+
+    fetchCities();
+  }, [selectedState]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -77,6 +193,15 @@ const RegisterProfessional = () => {
       return;
     }
 
+    if (!selectedProfession || !selectedSpecialty) {
+      toast({
+        variant: 'destructive',
+        title: 'Campos obrigatórios',
+        description: 'Por favor, selecione sua profissão e especialidade.',
+      });
+      return;
+    }
+
     if (!documentFront || !documentBack) {
       toast({
         variant: 'destructive',
@@ -105,6 +230,12 @@ const RegisterProfessional = () => {
         const frontUrl = await uploadDocument(documentFront, authData.user.id, 'front');
         const backUrl = await uploadDocument(documentBack, authData.user.id, 'back');
 
+        // Get selected values for display
+        const selectedProfessionData = professions.find(p => p.id === selectedProfession);
+        const selectedSpecialtyData = specialties.find(s => s.id === selectedSpecialty);
+        const selectedStateData = states.find(s => s.id === selectedState);
+        const selectedCityData = cities.find(c => c.id === selectedCity);
+
         // Create professional profile
         const { error: profileError } = await supabase
           .from('professional_profiles')
@@ -113,12 +244,16 @@ const RegisterProfessional = () => {
             full_name: formData.fullName,
             cpf: formData.cpf,
             professional_registration: formData.professionalRegistration,
-            specialty: formData.specialty,
+            specialty: selectedSpecialtyData?.name || '',
+            profession_id: selectedProfession,
+            specialty_id: selectedSpecialty,
+            council_id: selectedCouncil || null,
             phone: formData.phone,
             clinic_name: formData.clinicName,
             clinic_address: formData.clinicAddress,
-            city: formData.city,
-            state: formData.state,
+            city: selectedCityData?.name || '',
+            state: selectedStateData?.abbreviation || '',
+            zip_code: formData.zipCode,
             document_front_url: frontUrl,
             document_back_url: backUrl,
             approval_status: 'pending',
@@ -204,28 +339,78 @@ const RegisterProfessional = () => {
                   onChange={handleChange}
                 />
               </div>
+
+              {/* Profession Select */}
+              <div className="col-span-2 space-y-2">
+                <Label>Profissão *</Label>
+                <Select value={selectedProfession} onValueChange={setSelectedProfession}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione sua profissão" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {professions.map((profession) => (
+                      <SelectItem key={profession.id} value={profession.id}>
+                        {profession.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Specialty Select */}
               <div className="space-y-2">
-                <Label htmlFor="professionalRegistration">Registro Profissional</Label>
+                <Label>Especialidade *</Label>
+                <Select 
+                  value={selectedSpecialty} 
+                  onValueChange={setSelectedSpecialty}
+                  disabled={!selectedProfession}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {specialties.map((specialty) => (
+                      <SelectItem key={specialty.id} value={specialty.id}>
+                        {specialty.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Council Select */}
+              <div className="space-y-2">
+                <Label>Conselho</Label>
+                <Select 
+                  value={selectedCouncil} 
+                  onValueChange={setSelectedCouncil}
+                  disabled={!selectedProfession}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {councils.map((council) => (
+                      <SelectItem key={council.id} value={council.id}>
+                        {council.abbreviation} - {council.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="col-span-2 space-y-2">
+                <Label htmlFor="professionalRegistration">Número do Registro Profissional</Label>
                 <Input
                   id="professionalRegistration"
                   name="professionalRegistration"
-                  placeholder="CRM, CRO, CREFITO..."
+                  placeholder="Ex: 12345-SP"
                   value={formData.professionalRegistration}
                   onChange={handleChange}
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="specialty">Especialidade</Label>
-                <Input
-                  id="specialty"
-                  name="specialty"
-                  placeholder="Sua especialidade"
-                  value={formData.specialty}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
+
               <div className="col-span-2 space-y-2">
                 <Label htmlFor="clinicName">Nome da Clínica (opcional)</Label>
                 <Input
@@ -246,23 +431,52 @@ const RegisterProfessional = () => {
                   onChange={handleChange}
                 />
               </div>
+
+              {/* State Select */}
               <div className="space-y-2">
-                <Label htmlFor="city">Cidade</Label>
-                <Input
-                  id="city"
-                  name="city"
-                  placeholder="Cidade"
-                  value={formData.city}
-                  onChange={handleChange}
-                />
+                <Label>Estado *</Label>
+                <Select value={selectedState} onValueChange={setSelectedState}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {states.map((state) => (
+                      <SelectItem key={state.id} value={state.id}>
+                        {state.name} ({state.abbreviation})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
+
+              {/* City Select */}
               <div className="space-y-2">
-                <Label htmlFor="state">Estado</Label>
+                <Label>Cidade</Label>
+                <Select 
+                  value={selectedCity} 
+                  onValueChange={setSelectedCity}
+                  disabled={!selectedState || cities.length === 0}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={cities.length === 0 ? "Digite sua cidade abaixo" : "Selecione"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {cities.map((city) => (
+                      <SelectItem key={city.id} value={city.id}>
+                        {city.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="zipCode">CEP</Label>
                 <Input
-                  id="state"
-                  name="state"
-                  placeholder="UF"
-                  value={formData.state}
+                  id="zipCode"
+                  name="zipCode"
+                  placeholder="00000-000"
+                  value={formData.zipCode}
                   onChange={handleChange}
                 />
               </div>
