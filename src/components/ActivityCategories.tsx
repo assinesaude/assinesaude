@@ -1,0 +1,58 @@
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+
+interface Category {
+  id: string;
+  name: string;
+  icon_url: string;
+  display_order: number;
+}
+
+const ActivityCategories = () => {
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      const { data } = await supabase
+        .from('activity_categories')
+        .select('*')
+        .eq('is_active', true)
+        .order('display_order');
+      
+      if (data) setCategories(data);
+    };
+
+    fetchCategories();
+  }, []);
+
+  if (categories.length === 0) return null;
+
+  return (
+    <section className="py-12">
+      <div className="container mx-auto px-4">
+        <div className="flex flex-wrap justify-center gap-6 md:gap-10">
+          {categories.map((category) => (
+            <div 
+              key={category.id} 
+              className="group flex flex-col items-center gap-3 cursor-pointer"
+            >
+              <div className="rounded-full p-6 flex items-center justify-center border border-primary/50 transition-all duration-300 group-hover:bg-gradient-to-br group-hover:from-primary group-hover:to-primary/70 group-hover:border-transparent group-hover:shadow-lg">
+                <img 
+                  src={category.icon_url} 
+                  alt={category.name} 
+                  className="size-16 md:size-20 max-w-[80px] object-contain transition-all duration-300 group-hover:brightness-0 group-hover:invert" 
+                  loading="lazy"
+                />
+              </div>
+              <span className="text-sm font-medium text-muted-foreground group-hover:text-primary transition-colors">
+                {category.name}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+export default ActivityCategories;

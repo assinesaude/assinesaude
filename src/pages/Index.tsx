@@ -1,6 +1,7 @@
 import Header from "@/components/Header";
 import HeroCarousel from "@/components/HeroCarousel";
 import SearchSection from "@/components/SearchSection";
+import ActivityCategories from "@/components/ActivityCategories";
 import FeaturesSection from "@/components/FeaturesSection";
 import TestimonialsSection from "@/components/TestimonialsSection";
 import CTASection from "@/components/CTASection";
@@ -18,6 +19,7 @@ const Index = () => {
       <main>
         <HeroCarousel />
         <SearchSection />
+        <ActivityCategories />
         <FeaturesSection />
         <CTASection />
         <TestimonialsSection />
