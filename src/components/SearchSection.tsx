@@ -1,7 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Search, MapPin, Stethoscope, Award } from "lucide-react";
+import { Search, Stethoscope, Award } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -9,24 +8,58 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
+import LocationAutocomplete from "@/components/LocationAutocomplete";
 
-const profissoes = [
-  "Médico(a)",
-  "Médico(a) Veterinário(a)",
-  "Biomédico(a)",
-  "Dentista",
-  "Fisioterapeuta",
-  "Fonoaudiólogo(a)",
-  "Quiropraxista",
-  "Psicólogo(a)",
-  "Psicanalista",
-  "Nutricionista",
-  "Enfermeiro(a)",
-  "Farmacêutico(a)"
-];
+interface Profession {
+  id: string;
+  name: string;
+}
+
+interface Specialty {
+  id: string;
+  name: string;
+  profession_id: string;
+}
 
 const SearchSection = () => {
   const [location, setLocation] = useState("");
+  const [professions, setProfessions] = useState<Profession[]>([]);
+  const [specialties, setSpecialties] = useState<Specialty[]>([]);
+  const [selectedProfession, setSelectedProfession] = useState("");
+  const [selectedSpecialty, setSelectedSpecialty] = useState("");
+
+  useEffect(() => {
+    fetchProfessions();
+    fetchSpecialties();
+  }, []);
+
+  const fetchProfessions = async () => {
+    const { data } = await supabase
+      .from('professions')
+      .select('id, name')
+      .eq('is_active', true)
+      .order('name');
+    
+    if (data) setProfessions(data);
+  };
+
+  const fetchSpecialties = async () => {
+    const { data } = await supabase
+      .from('specialties')
+      .select('id, name, profession_id')
+      .eq('is_active', true)
+      .order('name');
+    
+    if (data) setSpecialties(data);
+  };
+
+  const filteredSpecialties = selectedProfession
+    ? specialties.filter(s => {
+        const profession = professions.find(p => p.name.toLowerCase() === selectedProfession);
+        return profession && s.profession_id === profession.id;
+      })
+    : specialties;
 
   return (
     <section className="relative -mt-24 z-40 px-4">
@@ -42,28 +75,24 @@ const SearchSection = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="relative">
-              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
-              <Input
-                placeholder="Cidade ou Bairro"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                className="pl-10 h-12 bg-background"
-              />
-            </div>
+            <LocationAutocomplete
+              value={location}
+              onChange={(value) => setLocation(value)}
+              placeholder="Cidade ou Estado"
+            />
 
             <div className="relative">
-              <Select>
+              <Select value={selectedProfession} onValueChange={setSelectedProfession}>
                 <SelectTrigger className="h-12 bg-background">
                   <div className="flex items-center gap-2">
-                    <Stethoscope className="w-5 h-5 text-muted" />
+                    <Stethoscope className="w-5 h-5 text-muted-foreground" />
                     <SelectValue placeholder="Profissão" />
                   </div>
                 </SelectTrigger>
                 <SelectContent>
-                  {profissoes.map((prof) => (
-                    <SelectItem key={prof} value={prof.toLowerCase()}>
-                      {prof}
+                  {professions.map((prof) => (
+                    <SelectItem key={prof.id} value={prof.name.toLowerCase()}>
+                      {prof.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -71,20 +100,19 @@ const SearchSection = () => {
             </div>
 
             <div className="relative">
-              <Select>
+              <Select value={selectedSpecialty} onValueChange={setSelectedSpecialty}>
                 <SelectTrigger className="h-12 bg-background">
                   <div className="flex items-center gap-2">
-                    <Award className="w-5 h-5 text-muted" />
+                    <Award className="w-5 h-5 text-muted-foreground" />
                     <SelectValue placeholder="Especialidade" />
                   </div>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="cardiologia">Cardiologia</SelectItem>
-                  <SelectItem value="dermatologia">Dermatologia</SelectItem>
-                  <SelectItem value="ortopedia">Ortopedia</SelectItem>
-                  <SelectItem value="pediatria">Pediatria</SelectItem>
-                  <SelectItem value="neurologia">Neurologia</SelectItem>
-                  <SelectItem value="oftalmologia">Oftalmologia</SelectItem>
+                  {filteredSpecialties.map((spec) => (
+                    <SelectItem key={spec.id} value={spec.name.toLowerCase()}>
+                      {spec.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
