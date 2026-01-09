@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
 import { useState } from "react";
+import logoAssinesaude from "@/assets/logo-assinesaude.png";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -22,9 +23,11 @@ const Header = () => {
           </div>
           
           <div className="flex-1 flex justify-center">
-            <h1 className="font-serif text-2xl md:text-3xl font-bold tracking-tight text-foreground">
-              Assine<span className="text-primary">Saúde</span>
-            </h1>
+            <img 
+              src={logoAssinesaude} 
+              alt="AssineSaúde" 
+              className="h-12 md:h-14 w-auto"
+            />
           </div>
           
           <div className="flex-1 hidden md:flex justify-end items-center gap-4">
