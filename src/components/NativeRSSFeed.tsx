@@ -24,6 +24,19 @@ const NativeRSSFeed = () => {
   useEffect(() => {
     const fetchNews = async () => {
       try {
+        // Check localStorage cache first (valid for 10 minutes)
+        const cached = localStorage.getItem('rss_news_cache');
+        const cacheTime = localStorage.getItem('rss_news_cache_time');
+        
+        if (cached && cacheTime) {
+          const cacheAge = Date.now() - parseInt(cacheTime);
+          if (cacheAge < 10 * 60 * 1000) { // 10 minutes
+            setNews(JSON.parse(cached));
+            setIsLoading(false);
+            return;
+          }
+        }
+
         const browserLanguage = navigator.language.split('-')[0];
         
         const { data, error } = await supabase.functions.invoke('translate-rss', {
@@ -32,11 +45,15 @@ const NativeRSSFeed = () => {
 
         if (error) {
           console.error('Error fetching news:', error);
+          setIsLoading(false);
           return;
         }
 
         if (data?.news) {
           setNews(data.news);
+          // Cache the result
+          localStorage.setItem('rss_news_cache', JSON.stringify(data.news));
+          localStorage.setItem('rss_news_cache_time', Date.now().toString());
         }
       } catch (error) {
         console.error('Error:', error);
