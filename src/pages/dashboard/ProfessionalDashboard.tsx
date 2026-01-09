@@ -331,6 +331,10 @@ const ProfessionalDashboard = () => {
             </div>
           </TabsContent>
 
+          <TabsContent value="coupons">
+            {profile && <CouponsManager creatorType="professional" professionalId={profile.id} />}
+          </TabsContent>
+
           <TabsContent value="plans">
             <div className="space-y-4">
               <p className="text-muted-foreground">
