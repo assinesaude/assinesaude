@@ -7,12 +7,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { LogOut, Clock, CheckCircle, AlertCircle, Plus, Package, Ticket, Sparkles } from 'lucide-react';
+import { LogOut, Clock, CheckCircle, AlertCircle, Plus, Ticket, Sparkles } from 'lucide-react';
 import logoAssinesaude from '@/assets/logo-assinesaude.png';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import CouponsManager from '@/components/admin/CouponsManager';
+import PricingPlans from '@/components/PricingPlans';
 
 interface ProfessionalProfile {
   id: string;
@@ -460,40 +461,24 @@ const ProfessionalDashboard = () => {
           </TabsContent>
 
           <TabsContent value="plans">
-            <div className="space-y-4">
-              <p className="text-muted-foreground">
-                Escolha o plano ideal para sua prática profissional
-              </p>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {plans.map((plan) => (
-                  <Card key={plan.id} className={plan.is_free ? 'border-primary' : ''}>
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg">{plan.name}</CardTitle>
-                        {plan.is_free && <Badge>Gratuito</Badge>}
-                      </div>
-                      <CardDescription>{plan.description}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-3xl font-bold mb-4">
-                        R$ {plan.price.toFixed(2)}
-                        <span className="text-sm font-normal text-muted-foreground">/mês</span>
-                      </div>
-                      <ul className="space-y-2 mb-6">
-                        {plan.features.map((feature, index) => (
-                          <li key={index} className="flex items-center gap-2 text-sm">
-                            <CheckCircle className="w-4 h-4 text-primary" />
-                            {feature}
-                          </li>
-                        ))}
-                      </ul>
-                      <Button className="w-full" variant={plan.is_free ? 'outline' : 'default'}>
-                        {plan.is_free ? 'Plano Atual' : 'Assinar'}
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
+            <div className="space-y-6">
+              <div className="text-center">
+                <h2 className="text-2xl font-bold mb-2">Escolha o plano ideal para sua prática</h2>
+                <p className="text-muted-foreground">
+                  Gerencie pacientes e expanda seu consultório com nossas ferramentas
+                </p>
               </div>
+              
+              <PricingPlans 
+                plans={plans}
+                onSubscribe={(planId, billingCycle, couponCode) => {
+                  console.log('Subscribe:', { planId, billingCycle, couponCode });
+                  toast({
+                    title: 'Em breve!',
+                    description: 'O sistema de pagamentos será ativado em breve.',
+                  });
+                }}
+              />
             </div>
           </TabsContent>
         </Tabs>
