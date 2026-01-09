@@ -4,7 +4,7 @@ import SearchSection from "@/components/SearchSection";
 import FeaturesSection from "@/components/FeaturesSection";
 import TestimonialsSection from "@/components/TestimonialsSection";
 import CTASection from "@/components/CTASection";
-import RSSFeedSection from "@/components/RSSFeedSection";
+import NativeRSSFeed from "@/components/NativeRSSFeed";
 import Footer from "@/components/Footer";
 
 const Index = () => {
@@ -21,7 +21,7 @@ const Index = () => {
         <FeaturesSection />
         <CTASection />
         <TestimonialsSection />
-        <RSSFeedSection />
+        <NativeRSSFeed />
       </main>
       
       <Footer />
