@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
+import healthNewsLogo from '@/assets/healthnewstoday-logo.png';
 
 interface NewsItem {
   title: string;
@@ -93,6 +94,15 @@ const NativeRSSFeed = () => {
       onMouseLeave={() => setIsPaused(false)}
     >
       <div className="container mx-auto px-4">
+        {/* Logo */}
+        <div className="max-w-6xl mx-auto mb-6">
+          <img 
+            src={healthNewsLogo} 
+            alt="HYNews Today" 
+            className="h-10 md:h-12 object-contain"
+          />
+        </div>
+
         <div className="relative max-w-6xl mx-auto">
           {/* Navigation Arrows */}
           <Button
