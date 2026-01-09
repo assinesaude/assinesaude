@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import logoAssinesaude from "@/assets/logo-assinesaude.png";
 
 const Header = () => {
@@ -39,11 +40,11 @@ const Header = () => {
                 Contato
               </a>
             </nav>
-            <Button variant="outline" size="sm">
-              Entrar
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/login">Entrar</Link>
             </Button>
-            <Button size="sm">
-              Cadastrar
+            <Button size="sm" asChild>
+              <Link to="/cadastro">Cadastrar</Link>
             </Button>
           </div>
 
@@ -73,11 +74,11 @@ const Header = () => {
                 Contato
               </a>
               <div className="flex gap-2 mt-2">
-                <Button variant="outline" size="sm" className="flex-1">
-                  Entrar
+                <Button variant="outline" size="sm" className="flex-1" asChild>
+                  <Link to="/login">Entrar</Link>
                 </Button>
-                <Button size="sm" className="flex-1">
-                  Cadastrar
+                <Button size="sm" className="flex-1" asChild>
+                  <Link to="/cadastro">Cadastrar</Link>
                 </Button>
               </div>
             </nav>
