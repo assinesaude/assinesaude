@@ -5,7 +5,6 @@ import FeaturesSection from "@/components/FeaturesSection";
 import TestimonialsSection from "@/components/TestimonialsSection";
 import CTASection from "@/components/CTASection";
 import Footer from "@/components/Footer";
-import AIChatWidget from "@/components/AIChatWidget";
 
 const Index = () => {
   return (
@@ -24,7 +23,6 @@ const Index = () => {
       </main>
       
       <Footer />
-      <AIChatWidget />
     </div>
   );
 };
