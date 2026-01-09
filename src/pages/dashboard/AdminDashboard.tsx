@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { LogOut, Users, CheckCircle, XCircle, Eye, Package, Briefcase, MessageSquare, Ticket } from 'lucide-react';
+import { LogOut, Users, CheckCircle, XCircle, Eye, Package, Briefcase, MessageSquare, Ticket, Edit, Trash2, Plus } from 'lucide-react';
 import logoAssinesaude from '@/assets/logo-assinesaude.png';
 import {
   Dialog,
@@ -21,6 +21,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import ProfessionsManager from '@/components/admin/ProfessionsManager';
 import MessagesManager from '@/components/admin/MessagesManager';
 import CouponsManager from '@/components/admin/CouponsManager';
@@ -63,12 +64,15 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [selectedProfessional, setSelectedProfessional] = useState<ProfessionalProfile | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [editingPlan, setEditingPlan] = useState<PlatformPlan | null>(null);
+  const [showPlanDialog, setShowPlanDialog] = useState(false);
   
-  const [newPlan, setNewPlan] = useState({
+  const [planForm, setPlanForm] = useState({
     name: '',
     description: '',
     price: '',
     features: '',
+    is_active: true,
   });
 
   useEffect(() => {
@@ -100,6 +104,37 @@ const AdminDashboard = () => {
     setLoading(false);
   };
 
+  const sendApprovalEmail = async (professional: ProfessionalProfile, isApproved: boolean, reason?: string) => {
+    try {
+      // Get user email from auth
+      const { data: userData } = await supabase.auth.admin.getUserById(professional.user_id);
+      const email = userData?.user?.email;
+      
+      if (!email) {
+        // Try to get from the user's metadata or use a placeholder
+        console.log('Could not get user email, skipping notification');
+        return;
+      }
+
+      const { error } = await supabase.functions.invoke('send-approval-email', {
+        body: {
+          professionalName: professional.full_name,
+          professionalEmail: email,
+          isApproved,
+          rejectionReason: reason,
+        },
+      });
+
+      if (error) {
+        console.error('Error sending email:', error);
+      } else {
+        console.log('Email sent successfully');
+      }
+    } catch (error) {
+      console.error('Error in sendApprovalEmail:', error);
+    }
+  };
+
   const handleApprove = async (professional: ProfessionalProfile) => {
     const { error } = await supabase
       .from('professional_profiles')
@@ -113,7 +148,9 @@ const AdminDashboard = () => {
     if (error) {
       toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível aprovar.' });
     } else {
-      toast({ title: 'Aprovado!', description: `${professional.full_name} foi aprovado.` });
+      toast({ title: 'Aprovado!', description: `${professional.full_name} foi aprovado. E-mail de notificação enviado.` });
+      // Send approval email
+      await sendApprovalEmail(professional, true);
       fetchData();
     }
   };
@@ -132,30 +169,100 @@ const AdminDashboard = () => {
     if (error) {
       toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível rejeitar.' });
     } else {
-      toast({ title: 'Rejeitado', description: `${selectedProfessional.full_name} foi rejeitado.` });
+      toast({ title: 'Rejeitado', description: `${selectedProfessional.full_name} foi rejeitado. E-mail de notificação enviado.` });
+      // Send rejection email
+      await sendApprovalEmail(selectedProfessional, false, rejectionReason);
       setSelectedProfessional(null);
       setRejectionReason('');
       fetchData();
     }
   };
 
-  const handleCreatePlan = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const features = newPlan.features.split('\n').filter(f => f.trim());
+  const openPlanDialog = (plan?: PlatformPlan) => {
+    if (plan) {
+      setEditingPlan(plan);
+      setPlanForm({
+        name: plan.name,
+        description: plan.description || '',
+        price: plan.price.toString(),
+        features: plan.features.join('\n'),
+        is_active: plan.is_active,
+      });
+    } else {
+      setEditingPlan(null);
+      setPlanForm({ name: '', description: '', price: '', features: '', is_active: true });
+    }
+    setShowPlanDialog(true);
+  };
 
-    const { error } = await supabase.from('platform_plans').insert({
-      name: newPlan.name,
-      description: newPlan.description,
-      price: parseFloat(newPlan.price) || 0,
-      features: features,
-      is_free: parseFloat(newPlan.price) === 0,
-    });
+  const handleSavePlan = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const features = planForm.features.split('\n').filter(f => f.trim());
+    const price = parseFloat(planForm.price) || 0;
+
+    if (editingPlan) {
+      const { error } = await supabase
+        .from('platform_plans')
+        .update({
+          name: planForm.name,
+          description: planForm.description,
+          price: price,
+          features: features,
+          is_free: price === 0,
+          is_active: planForm.is_active,
+        })
+        .eq('id', editingPlan.id);
+
+      if (error) {
+        toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível atualizar o plano.' });
+      } else {
+        toast({ title: 'Plano atualizado!', description: `O plano ${planForm.name} foi atualizado.` });
+        setShowPlanDialog(false);
+        fetchData();
+      }
+    } else {
+      const { error } = await supabase.from('platform_plans').insert({
+        name: planForm.name,
+        description: planForm.description,
+        price: price,
+        features: features,
+        is_free: price === 0,
+        is_active: planForm.is_active,
+      });
+
+      if (error) {
+        toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível criar o plano.' });
+      } else {
+        toast({ title: 'Plano criado!', description: `O plano ${planForm.name} foi criado.` });
+        setShowPlanDialog(false);
+        fetchData();
+      }
+    }
+  };
+
+  const handleDeletePlan = async (planId: string) => {
+    const { error } = await supabase
+      .from('platform_plans')
+      .delete()
+      .eq('id', planId);
 
     if (error) {
-      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível criar o plano.' });
+      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível excluir o plano.' });
     } else {
-      toast({ title: 'Plano criado!', description: `O plano ${newPlan.name} foi criado.` });
-      setNewPlan({ name: '', description: '', price: '', features: '' });
+      toast({ title: 'Plano excluído!', description: 'O plano foi removido.' });
+      fetchData();
+    }
+  };
+
+  const handleTogglePlanStatus = async (plan: PlatformPlan) => {
+    const { error } = await supabase
+      .from('platform_plans')
+      .update({ is_active: !plan.is_active })
+      .eq('id', plan.id);
+
+    if (error) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível alterar o status.' });
+    } else {
       fetchData();
     }
   };
@@ -333,33 +440,141 @@ const AdminDashboard = () => {
 
           <TabsContent value="plans">
             <Card>
-              <CardHeader>
-                <CardTitle>Criar Novo Plano B2B</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Gerenciar Planos B2B</CardTitle>
+                  <CardDescription>Crie e edite os planos disponíveis para profissionais</CardDescription>
+                </div>
+                <Button onClick={() => openPlanDialog()}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Novo Plano
+                </Button>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleCreatePlan} className="space-y-4">
+                {plans.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    Nenhum plano cadastrado. Crie o primeiro plano.
+                  </div>
+                ) : (
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {plans.map((plan) => (
+                      <Card key={plan.id} className={!plan.is_active ? 'opacity-60' : ''}>
+                        <CardHeader>
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <CardTitle className="text-lg flex items-center gap-2">
+                                {plan.name}
+                                {plan.is_free && <Badge variant="secondary">Gratuito</Badge>}
+                              </CardTitle>
+                              <CardDescription>{plan.description}</CardDescription>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Switch
+                                checked={plan.is_active}
+                                onCheckedChange={() => handleTogglePlanStatus(plan)}
+                              />
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="text-3xl font-bold text-primary">
+                            {plan.is_free ? 'Grátis' : `R$ ${plan.price.toFixed(2)}`}
+                            {!plan.is_free && <span className="text-sm font-normal text-muted-foreground">/mês</span>}
+                          </div>
+                          
+                          <ul className="space-y-2">
+                            {plan.features.map((feature, index) => (
+                              <li key={index} className="flex items-start gap-2 text-sm">
+                                <CheckCircle className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                                <span>{feature}</span>
+                              </li>
+                            ))}
+                          </ul>
+
+                          <div className="flex gap-2 pt-4 border-t">
+                            <Button variant="outline" size="sm" className="flex-1" onClick={() => openPlanDialog(plan)}>
+                              <Edit className="w-4 h-4 mr-1" />
+                              Editar
+                            </Button>
+                            <Button variant="destructive" size="sm" onClick={() => handleDeletePlan(plan.id)}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Plan Dialog */}
+            <Dialog open={showPlanDialog} onOpenChange={setShowPlanDialog}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{editingPlan ? 'Editar Plano' : 'Novo Plano'}</DialogTitle>
+                  <DialogDescription>
+                    {editingPlan ? 'Atualize as informações do plano' : 'Preencha as informações do novo plano'}
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSavePlan} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Nome</Label>
-                      <Input value={newPlan.name} onChange={(e) => setNewPlan({ ...newPlan, name: e.target.value })} required />
+                      <Label>Nome do Plano</Label>
+                      <Input 
+                        value={planForm.name} 
+                        onChange={(e) => setPlanForm({ ...planForm, name: e.target.value })} 
+                        placeholder="Ex: Plano Premium"
+                        required 
+                      />
                     </div>
                     <div className="space-y-2">
-                      <Label>Preço (R$)</Label>
-                      <Input type="number" step="0.01" value={newPlan.price} onChange={(e) => setNewPlan({ ...newPlan, price: e.target.value })} required />
+                      <Label>Preço Mensal (R$)</Label>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        value={planForm.price} 
+                        onChange={(e) => setPlanForm({ ...planForm, price: e.target.value })} 
+                        placeholder="0.00 para gratuito"
+                        required 
+                      />
                     </div>
                   </div>
                   <div className="space-y-2">
                     <Label>Descrição</Label>
-                    <Textarea value={newPlan.description} onChange={(e) => setNewPlan({ ...newPlan, description: e.target.value })} />
+                    <Textarea 
+                      value={planForm.description} 
+                      onChange={(e) => setPlanForm({ ...planForm, description: e.target.value })} 
+                      placeholder="Descreva os benefícios do plano..."
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label>Recursos (um por linha)</Label>
-                    <Textarea value={newPlan.features} onChange={(e) => setNewPlan({ ...newPlan, features: e.target.value })} rows={4} />
+                    <Textarea 
+                      value={planForm.features} 
+                      onChange={(e) => setPlanForm({ ...planForm, features: e.target.value })} 
+                      rows={5}
+                      placeholder="Perfil verificado&#10;Cupons ilimitados&#10;Suporte prioritário"
+                    />
                   </div>
-                  <Button type="submit">Criar Plano</Button>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={planForm.is_active}
+                      onCheckedChange={(checked) => setPlanForm({ ...planForm, is_active: checked })}
+                    />
+                    <Label>Plano ativo</Label>
+                  </div>
+                  <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => setShowPlanDialog(false)}>
+                      Cancelar
+                    </Button>
+                    <Button type="submit">
+                      {editingPlan ? 'Atualizar' : 'Criar Plano'}
+                    </Button>
+                  </DialogFooter>
                 </form>
-              </CardContent>
-            </Card>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
         </Tabs>
       </main>

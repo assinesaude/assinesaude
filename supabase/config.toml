@@ -3,3 +3,7 @@ project_id = "cgcgvhgrvmuwntdxmemw"
 [functions.ai-suggest-offerings]
 enabled = true
 verify_jwt = true
+
+[functions.send-approval-email]
+enabled = true
+verify_jwt = true
