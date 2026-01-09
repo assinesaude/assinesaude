@@ -96,11 +96,18 @@ const NativeRSSFeed = () => {
       <div className="container mx-auto px-4">
         {/* Logo */}
         <div className="max-w-6xl mx-auto mb-6">
-          <img 
-            src={healthNewsLogo} 
-            alt="HYNews Today" 
-            className="h-10 md:h-12 object-contain"
-          />
+          <a 
+            href="https://www.healthnews.today" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="inline-block hover:opacity-80 transition-opacity"
+          >
+            <img 
+              src={healthNewsLogo} 
+              alt="HYNews Today" 
+              className="h-10 md:h-12 object-contain"
+            />
+          </a>
         </div>
 
         <div className="relative max-w-6xl mx-auto">
