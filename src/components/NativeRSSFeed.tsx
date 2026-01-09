@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Newspaper, ExternalLink } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -10,6 +9,7 @@ interface NewsItem {
   description: string;
   link: string;
   pubDate: string;
+  image: string;
 }
 
 const NativeRSSFeed = () => {
@@ -17,6 +17,8 @@ const NativeRSSFeed = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const fetchNews = async () => {
@@ -45,6 +47,29 @@ const NativeRSSFeed = () => {
     fetchNews();
   }, []);
 
+  // Autoplay effect
+  useEffect(() => {
+    if (news.length === 0 || isPaused) {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      return;
+    }
+
+    intervalRef.current = setInterval(() => {
+      setIsTransitioning(true);
+      setCurrentIndex((prev) => (prev + 1) % news.length);
+      setTimeout(() => setIsTransitioning(false), 300);
+    }, 5000);
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [news.length, isPaused]);
+
   const goToNext = () => {
     if (isTransitioning) return;
     setIsTransitioning(true);
@@ -62,19 +87,13 @@ const NativeRSSFeed = () => {
   const currentNews = news[currentIndex];
 
   return (
-    <section className="py-16 bg-muted/30">
+    <section 
+      className="py-12"
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+    >
       <div className="container mx-auto px-4">
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <Newspaper className="h-8 w-8 text-primary" />
-            <h2 className="text-3xl font-bold">Últimas Notícias em Saúde</h2>
-          </div>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
-            Fique por dentro das novidades e tendências do mundo da saúde
-          </p>
-        </div>
-
-        <div className="relative max-w-4xl mx-auto">
+        <div className="relative max-w-6xl mx-auto">
           {/* Navigation Arrows */}
           <Button
             variant="outline"
@@ -96,29 +115,42 @@ const NativeRSSFeed = () => {
             <ChevronRight className="h-6 w-6" />
           </Button>
 
-          {/* News Card */}
-          <Card className="overflow-hidden border-border/50 shadow-xl bg-gradient-to-br from-background to-muted/20">
-            <CardContent className="p-8 md:p-12">
-              {isLoading ? (
-                <div className="space-y-4">
-                  <Skeleton className="h-8 w-3/4 mx-auto" />
+          {/* News Content */}
+          <div className="overflow-hidden rounded-2xl border border-border/50 shadow-xl bg-card">
+            {isLoading ? (
+              <div className="flex flex-col md:flex-row">
+                <Skeleton className="w-full md:w-1/2 h-64 md:h-80" />
+                <div className="p-8 flex-1 space-y-4">
+                  <Skeleton className="h-8 w-3/4" />
                   <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-5/6 mx-auto" />
-                  <Skeleton className="h-4 w-4/5 mx-auto" />
+                  <Skeleton className="h-4 w-5/6" />
+                  <Skeleton className="h-4 w-4/5" />
                 </div>
-              ) : currentNews ? (
-                <div
-                  className={`transition-all duration-300 ${
-                    isTransitioning ? 'opacity-0 transform scale-95' : 'opacity-100 transform scale-100'
-                  }`}
-                >
-                  <h3 className="text-2xl md:text-3xl font-bold text-center mb-6 text-foreground leading-tight">
+              </div>
+            ) : currentNews ? (
+              <div
+                className={`flex flex-col md:flex-row transition-all duration-300 ${
+                  isTransitioning ? 'opacity-0 transform scale-95' : 'opacity-100 transform scale-100'
+                }`}
+              >
+                {/* Image */}
+                <div className="w-full md:w-1/2 h-64 md:h-80 overflow-hidden">
+                  <img
+                    src={currentNews.image}
+                    alt={currentNews.title}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                
+                {/* Content */}
+                <div className="flex-1 p-8 flex flex-col justify-center">
+                  <h3 className="text-xl md:text-2xl font-bold mb-4 text-foreground leading-tight">
                     {currentNews.title}
                   </h3>
-                  <p className="text-muted-foreground text-center text-lg leading-relaxed mb-8">
+                  <p className="text-muted-foreground text-base leading-relaxed mb-6">
                     {currentNews.description}
                   </p>
-                  <div className="flex justify-center">
+                  <div>
                     <Button
                       variant="outline"
                       className="gap-2 hover:bg-primary hover:text-primary-foreground transition-colors"
@@ -129,13 +161,13 @@ const NativeRSSFeed = () => {
                     </Button>
                   </div>
                 </div>
-              ) : (
-                <p className="text-center text-muted-foreground">
-                  Nenhuma notícia disponível no momento.
-                </p>
-              )}
-            </CardContent>
-          </Card>
+              </div>
+            ) : (
+              <p className="text-center text-muted-foreground p-8">
+                Nenhuma notícia disponível no momento.
+              </p>
+            )}
+          </div>
 
           {/* Pagination Dots */}
           {news.length > 0 && (

@@ -5,37 +5,42 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Sample health news data (RSS feeds often have CORS restrictions, so we use curated content)
+// Sample health news data with images
 const healthNews = [
   {
     title: "New Study Reveals Benefits of Mediterranean Diet for Heart Health",
     description: "Research confirms that following a Mediterranean diet can significantly reduce the risk of cardiovascular disease and improve overall heart health.",
     link: "https://www.healthnews.today/mediterranean-diet",
     pubDate: new Date().toISOString(),
+    image: "https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=800&q=80",
   },
   {
     title: "Exercise and Mental Health: The Connection Scientists Are Exploring",
     description: "Regular physical activity has been shown to reduce symptoms of anxiety and depression, with researchers now understanding the biological mechanisms behind this connection.",
     link: "https://www.healthnews.today/exercise-mental-health",
     pubDate: new Date().toISOString(),
+    image: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=800&q=80",
   },
   {
     title: "Sleep Quality More Important Than Duration, New Research Suggests",
     description: "A comprehensive study indicates that the quality of sleep may be more crucial for health outcomes than the total hours spent sleeping.",
     link: "https://www.healthnews.today/sleep-quality",
     pubDate: new Date().toISOString(),
+    image: "https://images.unsplash.com/photo-1541781774459-bb2af2f05b55?w=800&q=80",
   },
   {
     title: "Vitamin D Deficiency Linked to Increased Health Risks",
     description: "Healthcare professionals are emphasizing the importance of adequate vitamin D levels, as deficiency has been associated with various health conditions.",
     link: "https://www.healthnews.today/vitamin-d",
     pubDate: new Date().toISOString(),
+    image: "https://images.unsplash.com/photo-1559757175-5700dde675bc?w=800&q=80",
   },
   {
     title: "Mindfulness Meditation Shows Promise for Chronic Pain Management",
     description: "Clinical trials demonstrate that mindfulness-based interventions can help patients manage chronic pain and reduce reliance on medication.",
     link: "https://www.healthnews.today/mindfulness-pain",
     pubDate: new Date().toISOString(),
+    image: "https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=800&q=80",
   },
 ];
 
