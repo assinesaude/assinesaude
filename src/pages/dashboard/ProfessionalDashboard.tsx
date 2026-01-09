@@ -469,16 +469,7 @@ const ProfessionalDashboard = () => {
                 </p>
               </div>
               
-              <PricingPlans 
-                plans={plans}
-                onSubscribe={(planId, billingCycle, couponCode) => {
-                  console.log('Subscribe:', { planId, billingCycle, couponCode });
-                  toast({
-                    title: 'Em breve!',
-                    description: 'O sistema de pagamentos será ativado em breve.',
-                  });
-                }}
-              />
+              <PricingPlans plans={plans} />
             </div>
           </TabsContent>
         </Tabs>
