@@ -12,6 +12,10 @@ import Login from "./pages/auth/Login";
 import RegisterChoice from "./pages/auth/RegisterChoice";
 import RegisterPatient from "./pages/auth/RegisterPatient";
 import RegisterProfessional from "./pages/auth/RegisterProfessional";
+import AuthCallback from "./pages/auth/AuthCallback";
+import CompleteRegistrationChoice from "./pages/auth/CompleteRegistrationChoice";
+import CompletePatientRegistration from "./pages/auth/CompletePatientRegistration";
+import CompleteProfessionalRegistration from "./pages/auth/CompleteProfessionalRegistration";
 import AdminDashboard from "./pages/dashboard/AdminDashboard";
 import ProfessionalDashboard from "./pages/dashboard/ProfessionalDashboard";
 import PatientDashboard from "./pages/dashboard/PatientDashboard";
@@ -35,6 +39,10 @@ const App = () => (
               <Route path="/cadastro" element={<RegisterChoice />} />
               <Route path="/cadastro/paciente" element={<RegisterPatient />} />
               <Route path="/cadastro/profissional" element={<RegisterProfessional />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
+              <Route path="/completar-cadastro" element={<CompleteRegistrationChoice />} />
+              <Route path="/completar-cadastro/paciente" element={<CompletePatientRegistration />} />
+              <Route path="/completar-cadastro/profissional" element={<CompleteProfessionalRegistration />} />
               <Route path="/profissional/:slug" element={<ProfessionalProfile />} />
               <Route path="/politica-de-privacidade" element={<PrivacyPolicy />} />
               <Route path="/termos-de-uso" element={<TermsOfService />} />
