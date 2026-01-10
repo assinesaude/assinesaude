@@ -4,22 +4,22 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { LogOut, Clock, CheckCircle, AlertCircle, Plus, Ticket, Sparkles } from 'lucide-react';
-import logoAssinesaude from '@/assets/logo-assinesaude.png';
+import { Clock, CheckCircle, AlertCircle, Plus, Sparkles } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import CouponsManager from '@/components/admin/CouponsManager';
 import PricingPlans from '@/components/PricingPlans';
+import { DashboardWithSidebar } from '@/components/layout/DashboardLayout';
 
 interface ProfessionalProfile {
   id: string;
   full_name: string;
   specialty: string;
   clinic_name: string | null;
+  avatar_url: string | null;
   approval_status: 'pending' | 'approved' | 'rejected';
   rejection_reason: string | null;
 }
@@ -59,6 +59,7 @@ const ProfessionalDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<AISuggestion[]>([]);
+  const [activeTab, setActiveTab] = useState('offerings');
   
   const [newOffering, setNewOffering] = useState({
     title: '',
@@ -79,7 +80,7 @@ const ProfessionalDashboard = () => {
     // Fetch professional profile
     const { data: profData, error: profError } = await supabase
       .from('professional_profiles')
-      .select('*')
+      .select('id, full_name, specialty, clinic_name, avatar_url, approval_status, rejection_reason')
       .eq('user_id', user?.id)
       .maybeSingle();
 
@@ -138,12 +139,12 @@ const ProfessionalDashboard = () => {
       toast({
         variant: 'destructive',
         title: 'Erro',
-        description: 'Não foi possível criar a oferta de serviço.',
+        description: 'Não foi possível criar o programa de atendimento.',
       });
     } else {
       toast({
-        title: 'Oferta criada!',
-        description: 'Sua oferta de serviço foi criada com sucesso.',
+        title: 'Programa criado!',
+        description: 'Seu programa de atendimento foi criado com sucesso.',
       });
       setNewOffering({ title: '', description: '', price: '', duration: '' });
       fetchData();
@@ -201,24 +202,229 @@ const ProfessionalDashboard = () => {
   const isRejected = profile?.approval_status === 'rejected';
   const isApproved = profile?.approval_status === 'approved';
 
-  return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="bg-card border-b border-border">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <img src={logoAssinesaude} alt="AssineSaúde" className="h-12" />
-            <Badge variant="outline">Profissional</Badge>
-          </div>
-          <Button variant="outline" onClick={handleLogout}>
-            <LogOut className="w-4 h-4 mr-2" />
-            Sair
-          </Button>
-        </div>
-      </header>
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'offerings':
+        return (
+          <div className="space-y-6">
+            {/* AI Suggestion Button */}
+            {isApproved && (
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <Sparkles className="w-5 h-5 text-primary" />
+                        Assistente IA
+                      </CardTitle>
+                      <CardDescription>
+                        Use inteligência artificial para criar programas de atendimento
+                      </CardDescription>
+                    </div>
+                    <Button 
+                      onClick={handleAISuggestions} 
+                      disabled={aiLoading}
+                      variant="outline"
+                    >
+                      {aiLoading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-primary mr-2"></div>
+                          Gerando...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-4 h-4 mr-2" />
+                          Gerar Sugestões com IA
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </CardHeader>
+                {aiSuggestions.length > 0 && (
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Sugestões geradas pela IA. Clique em uma para usar como base:
+                    </p>
+                    <div className="grid md:grid-cols-3 gap-4">
+                      {aiSuggestions.map((suggestion, index) => (
+                        <Card 
+                          key={index} 
+                          className="cursor-pointer hover:border-primary transition-colors"
+                          onClick={() => {
+                            setNewOffering({
+                              title: suggestion.title,
+                              description: suggestion.description,
+                              price: suggestion.price.toString(),
+                              duration: suggestion.duration_minutes.toString(),
+                            });
+                            setAiSuggestions([]);
+                            toast({ title: "Sugestão aplicada!", description: "Revise e ajuste os dados conforme necessário." });
+                          }}
+                        >
+                          <CardHeader className="p-4">
+                            <CardTitle className="text-sm">{suggestion.title}</CardTitle>
+                          </CardHeader>
+                          <CardContent className="p-4 pt-0">
+                            <p className="text-xs text-muted-foreground mb-2 line-clamp-2">{suggestion.description}</p>
+                            <div className="flex justify-between text-xs">
+                              <span className="font-semibold">R$ {suggestion.price.toFixed(2)}</span>
+                              <span>{suggestion.duration_minutes} min</span>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </CardContent>
+                )}
+              </Card>
+            )}
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
+            {/* Create new offering */}
+            {isApproved && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Novo Programa de Atendimento</CardTitle>
+                  <CardDescription>
+                    Adicione um novo programa personalizado para seus pacientes
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleCreateOffering} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="title">Título do Programa</Label>
+                        <Input
+                          id="title"
+                          value={newOffering.title}
+                          onChange={(e) => setNewOffering({ ...newOffering, title: e.target.value })}
+                          placeholder="Ex: Programa de Acompanhamento Nutricional"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="price">Preço (R$)</Label>
+                        <Input
+                          id="price"
+                          type="number"
+                          step="0.01"
+                          value={newOffering.price}
+                          onChange={(e) => setNewOffering({ ...newOffering, price: e.target.value })}
+                          placeholder="150.00"
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="description">Descrição</Label>
+                      <Textarea
+                        id="description"
+                        value={newOffering.description}
+                        onChange={(e) => setNewOffering({ ...newOffering, description: e.target.value })}
+                        placeholder="Descreva os benefícios do programa..."
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="duration">Duração (minutos)</Label>
+                      <Input
+                        id="duration"
+                        type="number"
+                        value={newOffering.duration}
+                        onChange={(e) => setNewOffering({ ...newOffering, duration: e.target.value })}
+                        placeholder="60"
+                      />
+                    </div>
+                    <Button type="submit">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Criar Programa
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Existing offerings */}
+            {offerings.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center text-muted-foreground">
+                  {isApproved 
+                    ? 'Você ainda não tem programas de atendimento. Crie seu primeiro programa acima!'
+                    : 'Seus programas de atendimento aparecerão aqui após a aprovação do seu cadastro.'}
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {offerings.map((offering) => (
+                  <Card key={offering.id}>
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg">{offering.title}</CardTitle>
+                        <Badge variant={offering.is_active ? 'default' : 'secondary'}>
+                          {offering.is_active ? 'Ativo' : 'Inativo'}
+                        </Badge>
+                      </div>
+                      <CardDescription>{offering.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">
+                        R$ {offering.price.toFixed(2)}
+                      </div>
+                      {offering.duration_minutes && (
+                        <p className="text-sm text-muted-foreground">
+                          Duração: {offering.duration_minutes} min
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      
+      case 'coupons':
+        return profile ? (
+          <CouponsManager creatorType="professional" professionalId={profile.id} />
+        ) : (
+          <Card>
+            <CardContent className="py-12 text-center text-muted-foreground">
+              Carregando...
+            </CardContent>
+          </Card>
+        );
+      
+      case 'plans':
+        return (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Planos B2B da Plataforma</CardTitle>
+                <CardDescription>
+                  Escolha o plano ideal para expandir seu atendimento
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <PricingPlans plans={plans} />
+              </CardContent>
+            </Card>
+          </div>
+        );
+      
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <DashboardWithSidebar
+      userType="professional"
+      userName={profile?.full_name}
+      userAvatar={profile?.avatar_url}
+      userSubtitle={profile?.specialty}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      onLogout={handleLogout}
+    >
+      <div className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-2">Olá, {profile?.full_name}</h1>
         <p className="text-muted-foreground mb-8">{profile?.specialty}</p>
 
@@ -258,223 +464,16 @@ const ProfessionalDashboard = () => {
               <div>
                 <h3 className="font-semibold">Cadastro Aprovado</h3>
                 <p className="text-sm text-muted-foreground">
-                  Suas ofertas de serviços estão visíveis para os pacientes.
+                  Seus programas de atendimento estão visíveis para os pacientes.
                 </p>
               </div>
             </CardContent>
           </Card>
         )}
 
-        <Tabs defaultValue="offerings" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="offerings">Minhas Ofertas</TabsTrigger>
-            <TabsTrigger value="coupons"><Ticket className="w-4 h-4 mr-1" />Meus Cupons</TabsTrigger>
-            <TabsTrigger value="plans">Planos da Plataforma</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="offerings">
-            <div className="space-y-6">
-              {/* AI Suggestion Button */}
-              {isApproved && (
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle className="flex items-center gap-2">
-                          <Sparkles className="w-5 h-5 text-primary" />
-                          Assistente IA
-                        </CardTitle>
-                        <CardDescription>
-                          Use inteligência artificial para criar ofertas de serviços
-                        </CardDescription>
-                      </div>
-                      <Button 
-                        onClick={handleAISuggestions} 
-                        disabled={aiLoading}
-                        variant="outline"
-                      >
-                        {aiLoading ? (
-                          <>
-                            <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-primary mr-2"></div>
-                            Gerando...
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles className="w-4 h-4 mr-2" />
-                            Gerar Sugestões com IA
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  {aiSuggestions.length > 0 && (
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Sugestões geradas pela IA. Clique em uma para usar como base:
-                      </p>
-                      <div className="grid md:grid-cols-3 gap-4">
-                        {aiSuggestions.map((suggestion, index) => (
-                          <Card 
-                            key={index} 
-                            className="cursor-pointer hover:border-primary transition-colors"
-                            onClick={() => {
-                              setNewOffering({
-                                title: suggestion.title,
-                                description: suggestion.description,
-                                price: suggestion.price.toString(),
-                                duration: suggestion.duration_minutes.toString(),
-                              });
-                              setAiSuggestions([]);
-                              toast({ title: "Sugestão aplicada!", description: "Revise e ajuste os dados conforme necessário." });
-                            }}
-                          >
-                            <CardHeader className="p-4">
-                              <CardTitle className="text-sm">{suggestion.title}</CardTitle>
-                            </CardHeader>
-                            <CardContent className="p-4 pt-0">
-                              <p className="text-xs text-muted-foreground mb-2 line-clamp-2">{suggestion.description}</p>
-                              <div className="flex justify-between text-xs">
-                                <span className="font-semibold">R$ {suggestion.price.toFixed(2)}</span>
-                                <span>{suggestion.duration_minutes} min</span>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    </CardContent>
-                  )}
-                </Card>
-              )}
-
-              {/* Create new offering */}
-              {isApproved && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Nova Oferta de Serviço</CardTitle>
-                    <CardDescription>
-                      Adicione uma nova oferta para seus pacientes
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <form onSubmit={handleCreateOffering} className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="title">Título do Serviço</Label>
-                          <Input
-                            id="title"
-                            value={newOffering.title}
-                            onChange={(e) => setNewOffering({ ...newOffering, title: e.target.value })}
-                            placeholder="Ex: Consulta Inicial"
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="price">Preço (R$)</Label>
-                          <Input
-                            id="price"
-                            type="number"
-                            step="0.01"
-                            value={newOffering.price}
-                            onChange={(e) => setNewOffering({ ...newOffering, price: e.target.value })}
-                            placeholder="150.00"
-                            required
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="description">Descrição</Label>
-                        <Textarea
-                          id="description"
-                          value={newOffering.description}
-                          onChange={(e) => setNewOffering({ ...newOffering, description: e.target.value })}
-                          placeholder="Descreva o serviço..."
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="duration">Duração (minutos)</Label>
-                        <Input
-                          id="duration"
-                          type="number"
-                          value={newOffering.duration}
-                          onChange={(e) => setNewOffering({ ...newOffering, duration: e.target.value })}
-                          placeholder="60"
-                        />
-                      </div>
-                      <Button type="submit">
-                        <Plus className="w-4 h-4 mr-2" />
-                        Criar Oferta
-                      </Button>
-                    </form>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Existing offerings */}
-              {offerings.length === 0 ? (
-                <Card>
-                  <CardContent className="py-12 text-center text-muted-foreground">
-                    {isApproved 
-                      ? 'Você ainda não tem ofertas de serviços. Crie sua primeira oferta acima!'
-                      : 'Suas ofertas de serviços aparecerão aqui após a aprovação do seu cadastro.'}
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {offerings.map((offering) => (
-                    <Card key={offering.id}>
-                      <CardHeader>
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="text-lg">{offering.title}</CardTitle>
-                          <Badge variant={offering.is_active ? 'default' : 'secondary'}>
-                            {offering.is_active ? 'Ativo' : 'Inativo'}
-                          </Badge>
-                        </div>
-                        <CardDescription>{offering.description}</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">
-                          R$ {offering.price.toFixed(2)}
-                        </div>
-                        {offering.duration_minutes && (
-                          <p className="text-sm text-muted-foreground">
-                            Duração: {offering.duration_minutes} min
-                          </p>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="coupons">
-            {profile ? (
-              <CouponsManager creatorType="professional" professionalId={profile.id} />
-            ) : (
-              <Card>
-                <CardContent className="py-12 text-center text-muted-foreground">
-                  Carregando...
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-
-          <TabsContent value="plans">
-            <div className="space-y-6">
-              <div className="text-center">
-                <h2 className="text-2xl font-bold mb-2">Escolha o plano ideal para sua prática</h2>
-                <p className="text-muted-foreground">
-                  Gerencie pacientes e expanda seu consultório com nossas ferramentas
-                </p>
-              </div>
-              
-              <PricingPlans plans={plans} />
-            </div>
-          </TabsContent>
-        </Tabs>
-      </main>
-    </div>
+        {renderContent()}
+      </div>
+    </DashboardWithSidebar>
   );
 };
 

@@ -4,11 +4,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { LogOut, Users, CheckCircle, XCircle, Eye, Package, Briefcase, MessageSquare, Ticket, Edit, Trash2, Plus, Grid3X3, FileText } from 'lucide-react';
-import logoAssinesaude from '@/assets/logo-assinesaude.png';
+import { Users, CheckCircle, XCircle, Eye, Package, Edit, Trash2, Plus } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -27,6 +25,7 @@ import MessagesManager from '@/components/admin/MessagesManager';
 import CouponsManager from '@/components/admin/CouponsManager';
 import CategoriesManager from '@/components/admin/CategoriesManager';
 import ContractsManager from '@/components/admin/ContractsManager';
+import { DashboardWithSidebar } from '@/components/layout/DashboardLayout';
 
 interface ProfessionalProfile {
   id: string;
@@ -68,6 +67,7 @@ const AdminDashboard = () => {
   const [rejectionReason, setRejectionReason] = useState('');
   const [editingPlan, setEditingPlan] = useState<PlatformPlan | null>(null);
   const [showPlanDialog, setShowPlanDialog] = useState(false);
+  const [activeTab, setActiveTab] = useState('pending');
   
   const [planForm, setPlanForm] = useState({
     name: '',
@@ -108,12 +108,10 @@ const AdminDashboard = () => {
 
   const sendApprovalEmail = async (professional: ProfessionalProfile, isApproved: boolean, reason?: string) => {
     try {
-      // Get user email from auth
       const { data: userData } = await supabase.auth.admin.getUserById(professional.user_id);
       const email = userData?.user?.email;
       
       if (!email) {
-        // Try to get from the user's metadata or use a placeholder
         console.log('Could not get user email, skipping notification');
         return;
       }
@@ -129,8 +127,6 @@ const AdminDashboard = () => {
 
       if (error) {
         console.error('Error sending email:', error);
-      } else {
-        console.log('Email sent successfully');
       }
     } catch (error) {
       console.error('Error in sendApprovalEmail:', error);
@@ -150,8 +146,7 @@ const AdminDashboard = () => {
     if (error) {
       toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível aprovar.' });
     } else {
-      toast({ title: 'Aprovado!', description: `${professional.full_name} foi aprovado. E-mail de notificação enviado.` });
-      // Send approval email
+      toast({ title: 'Aprovado!', description: `${professional.full_name} foi aprovado.` });
       await sendApprovalEmail(professional, true);
       fetchData();
     }
@@ -171,8 +166,7 @@ const AdminDashboard = () => {
     if (error) {
       toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível rejeitar.' });
     } else {
-      toast({ title: 'Rejeitado', description: `${selectedProfessional.full_name} foi rejeitado. E-mail de notificação enviado.` });
-      // Send rejection email
+      toast({ title: 'Rejeitado', description: `${selectedProfessional.full_name} foi rejeitado.` });
       await sendApprovalEmail(selectedProfessional, false, rejectionReason);
       setSelectedProfessional(null);
       setRejectionReason('');
@@ -256,19 +250,6 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleTogglePlanStatus = async (plan: PlatformPlan) => {
-    const { error } = await supabase
-      .from('platform_plans')
-      .update({ is_active: !plan.is_active })
-      .eq('id', plan.id);
-
-    if (error) {
-      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível alterar o status.' });
-    } else {
-      fetchData();
-    }
-  };
-
   const handleLogout = async () => {
     await signOut();
     navigate('/');
@@ -277,22 +258,232 @@ const AdminDashboard = () => {
   const pendingProfessionals = professionals.filter(p => p.approval_status === 'pending');
   const approvedProfessionals = professionals.filter(p => p.approval_status === 'approved');
 
-  return (
-    <div className="min-h-screen bg-background">
-      <header className="bg-card border-b border-border">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <img src={logoAssinesaude} alt="AssineSaúde" className="h-12" />
-            <Badge variant="secondary">Admin</Badge>
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'pending':
+        return loading ? (
+          <div className="text-center py-12">Carregando...</div>
+        ) : pendingProfessionals.length === 0 ? (
+          <Card><CardContent className="py-12 text-center text-muted-foreground">Nenhum profissional pendente</CardContent></Card>
+        ) : (
+          <div className="space-y-4">
+            {pendingProfessionals.map((professional) => (
+              <Card key={professional.id}>
+                <CardContent className="p-6">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <h3 className="font-semibold text-lg">{professional.full_name}</h3>
+                      <p className="text-sm text-muted-foreground">{professional.specialty} • {professional.professional_registration}</p>
+                      <p className="text-sm text-muted-foreground">{professional.city}, {professional.state}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="sm"><Eye className="w-4 h-4 mr-2" />Ver Documentos</Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-2xl">
+                          <DialogHeader>
+                            <DialogTitle>Documentos de {professional.full_name}</DialogTitle>
+                          </DialogHeader>
+                          <div className="grid grid-cols-2 gap-4 py-4">
+                            <div>
+                              <p className="text-sm font-medium mb-2">Frente</p>
+                              {professional.document_front_url ? (
+                                <img src={professional.document_front_url} alt="Frente" className="w-full rounded-lg border" />
+                              ) : (
+                                <div className="bg-muted rounded-lg p-8 text-center text-sm">Não enviado</div>
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium mb-2">Verso</p>
+                              {professional.document_back_url ? (
+                                <img src={professional.document_back_url} alt="Verso" className="w-full rounded-lg border" />
+                              ) : (
+                                <div className="bg-muted rounded-lg p-8 text-center text-sm">Não enviado</div>
+                              )}
+                            </div>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                      <Button size="sm" onClick={() => handleApprove(professional)}><CheckCircle className="w-4 h-4 mr-2" />Aprovar</Button>
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="destructive" size="sm" onClick={() => setSelectedProfessional(professional)}><XCircle className="w-4 h-4 mr-2" />Rejeitar</Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Rejeitar Profissional</DialogTitle>
+                            <DialogDescription>Informe o motivo da rejeição</DialogDescription>
+                          </DialogHeader>
+                          <div className="py-4">
+                            <Label>Motivo</Label>
+                            <Textarea value={rejectionReason} onChange={(e) => setRejectionReason(e.target.value)} className="mt-2" />
+                          </div>
+                          <DialogFooter>
+                            <Button variant="destructive" onClick={handleReject}>Confirmar</Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-          <Button variant="outline" onClick={handleLogout}>
-            <LogOut className="w-4 h-4 mr-2" />
-            Sair
-          </Button>
-        </div>
-      </header>
+        );
+      
+      case 'approved':
+        return approvedProfessionals.length === 0 ? (
+          <Card><CardContent className="py-12 text-center text-muted-foreground">Nenhum profissional aprovado</CardContent></Card>
+        ) : (
+          <div className="space-y-4">
+            {approvedProfessionals.map((professional) => (
+              <Card key={professional.id}>
+                <CardContent className="p-6 flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold">{professional.full_name}</h3>
+                    <p className="text-sm text-muted-foreground">{professional.specialty}</p>
+                  </div>
+                  <Badge>Ativo</Badge>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        );
+      
+      case 'professions':
+        return <ProfessionsManager />;
+      
+      case 'categories':
+        return <CategoriesManager />;
+      
+      case 'contracts':
+        return <ContractsManager />;
+      
+      case 'messages':
+        return <MessagesManager />;
+      
+      case 'coupons':
+        return <CouponsManager creatorType="admin" />;
+      
+      case 'plans':
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold">Planos B2B</h2>
+              <Button onClick={() => openPlanDialog()}>
+                <Plus className="w-4 h-4 mr-2" />
+                Novo Plano
+              </Button>
+            </div>
 
-      <main className="container mx-auto px-4 py-8">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {plans.map((plan) => (
+                <Card key={plan.id} className={!plan.is_active ? 'opacity-60' : ''}>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle>{plan.name}</CardTitle>
+                      <div className="flex gap-2">
+                        <Button variant="ghost" size="icon" onClick={() => openPlanDialog(plan)}>
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDeletePlan(plan.id)}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <CardDescription>{plan.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold mb-4">
+                      {plan.is_free ? 'Gratuito' : `R$ ${plan.price.toFixed(2)}/mês`}
+                    </div>
+                    <ul className="space-y-2">
+                      {plan.features.map((feature, idx) => (
+                        <li key={idx} className="text-sm flex items-center gap-2">
+                          <CheckCircle className="w-4 h-4 text-primary" />
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="mt-4 pt-4 border-t">
+                      <Badge variant={plan.is_active ? 'default' : 'secondary'}>
+                        {plan.is_active ? 'Ativo' : 'Inativo'}
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            <Dialog open={showPlanDialog} onOpenChange={setShowPlanDialog}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{editingPlan ? 'Editar Plano' : 'Novo Plano'}</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleSavePlan} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Nome do Plano</Label>
+                    <Input
+                      value={planForm.name}
+                      onChange={(e) => setPlanForm({ ...planForm, name: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Descrição</Label>
+                    <Textarea
+                      value={planForm.description}
+                      onChange={(e) => setPlanForm({ ...planForm, description: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Preço (R$)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={planForm.price}
+                      onChange={(e) => setPlanForm({ ...planForm, price: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Funcionalidades (uma por linha)</Label>
+                    <Textarea
+                      value={planForm.features}
+                      onChange={(e) => setPlanForm({ ...planForm, features: e.target.value })}
+                      rows={4}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={planForm.is_active}
+                      onCheckedChange={(checked) => setPlanForm({ ...planForm, is_active: checked })}
+                    />
+                    <Label>Ativo</Label>
+                  </div>
+                  <DialogFooter>
+                    <Button type="submit">Salvar</Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
+        );
+      
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <DashboardWithSidebar
+      userType="admin"
+      userName="Administrador"
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      onLogout={handleLogout}
+    >
+      <div className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-8">Dashboard Administrativo</h1>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -325,272 +516,9 @@ const AdminDashboard = () => {
           </Card>
         </div>
 
-        <Tabs defaultValue="pending" className="space-y-6">
-          <TabsList className="flex-wrap h-auto gap-2">
-            <TabsTrigger value="pending">Pendentes ({pendingProfessionals.length})</TabsTrigger>
-            <TabsTrigger value="approved">Aprovados</TabsTrigger>
-            <TabsTrigger value="professions"><Briefcase className="w-4 h-4 mr-1" />Profissões</TabsTrigger>
-            <TabsTrigger value="categories"><Grid3X3 className="w-4 h-4 mr-1" />Vetores</TabsTrigger>
-            <TabsTrigger value="contracts"><FileText className="w-4 h-4 mr-1" />Contratos</TabsTrigger>
-            <TabsTrigger value="messages"><MessageSquare className="w-4 h-4 mr-1" />Mensagens</TabsTrigger>
-            <TabsTrigger value="coupons"><Ticket className="w-4 h-4 mr-1" />Cupons</TabsTrigger>
-            <TabsTrigger value="plans">Planos B2B</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="pending">
-            {loading ? (
-              <div className="text-center py-12">Carregando...</div>
-            ) : pendingProfessionals.length === 0 ? (
-              <Card><CardContent className="py-12 text-center text-muted-foreground">Nenhum profissional pendente</CardContent></Card>
-            ) : (
-              <div className="space-y-4">
-                {pendingProfessionals.map((professional) => (
-                  <Card key={professional.id}>
-                    <CardContent className="p-6">
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div className="space-y-1">
-                          <h3 className="font-semibold text-lg">{professional.full_name}</h3>
-                          <p className="text-sm text-muted-foreground">{professional.specialty} • {professional.professional_registration}</p>
-                          <p className="text-sm text-muted-foreground">{professional.city}, {professional.state}</p>
-                        </div>
-                        <div className="flex gap-2">
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button variant="outline" size="sm"><Eye className="w-4 h-4 mr-2" />Ver Documentos</Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-2xl">
-                              <DialogHeader>
-                                <DialogTitle>Documentos de {professional.full_name}</DialogTitle>
-                              </DialogHeader>
-                              <div className="grid grid-cols-2 gap-4 py-4">
-                                <div>
-                                  <p className="text-sm font-medium mb-2">Frente</p>
-                                  {professional.document_front_url ? (
-                                    <img src={professional.document_front_url} alt="Frente" className="w-full rounded-lg border" />
-                                  ) : (
-                                    <div className="bg-muted rounded-lg p-8 text-center text-sm">Não enviado</div>
-                                  )}
-                                </div>
-                                <div>
-                                  <p className="text-sm font-medium mb-2">Verso</p>
-                                  {professional.document_back_url ? (
-                                    <img src={professional.document_back_url} alt="Verso" className="w-full rounded-lg border" />
-                                  ) : (
-                                    <div className="bg-muted rounded-lg p-8 text-center text-sm">Não enviado</div>
-                                  )}
-                                </div>
-                              </div>
-                            </DialogContent>
-                          </Dialog>
-                          <Button size="sm" onClick={() => handleApprove(professional)}><CheckCircle className="w-4 h-4 mr-2" />Aprovar</Button>
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button variant="destructive" size="sm" onClick={() => setSelectedProfessional(professional)}><XCircle className="w-4 h-4 mr-2" />Rejeitar</Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                              <DialogHeader>
-                                <DialogTitle>Rejeitar Profissional</DialogTitle>
-                                <DialogDescription>Informe o motivo da rejeição</DialogDescription>
-                              </DialogHeader>
-                              <div className="py-4">
-                                <Label>Motivo</Label>
-                                <Textarea value={rejectionReason} onChange={(e) => setRejectionReason(e.target.value)} className="mt-2" />
-                              </div>
-                              <DialogFooter>
-                                <Button variant="destructive" onClick={handleReject}>Confirmar</Button>
-                              </DialogFooter>
-                            </DialogContent>
-                          </Dialog>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="approved">
-            {approvedProfessionals.length === 0 ? (
-              <Card><CardContent className="py-12 text-center text-muted-foreground">Nenhum profissional aprovado</CardContent></Card>
-            ) : (
-              <div className="space-y-4">
-                {approvedProfessionals.map((professional) => (
-                  <Card key={professional.id}>
-                    <CardContent className="p-6 flex items-center justify-between">
-                      <div>
-                        <h3 className="font-semibold">{professional.full_name}</h3>
-                        <p className="text-sm text-muted-foreground">{professional.specialty}</p>
-                      </div>
-                      <Badge>Ativo</Badge>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="professions">
-            <ProfessionsManager />
-          </TabsContent>
-
-          <TabsContent value="categories">
-            <CategoriesManager />
-          </TabsContent>
-
-          <TabsContent value="contracts">
-            <ContractsManager />
-          </TabsContent>
-
-          <TabsContent value="messages">
-            <MessagesManager />
-          </TabsContent>
-
-          <TabsContent value="coupons">
-            <CouponsManager creatorType="admin" />
-          </TabsContent>
-
-          <TabsContent value="plans">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Gerenciar Planos B2B</CardTitle>
-                  <CardDescription>Crie e edite os planos disponíveis para profissionais</CardDescription>
-                </div>
-                <Button onClick={() => openPlanDialog()}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Novo Plano
-                </Button>
-              </CardHeader>
-              <CardContent>
-                {plans.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground">
-                    Nenhum plano cadastrado. Crie o primeiro plano.
-                  </div>
-                ) : (
-                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {plans.map((plan) => (
-                      <Card key={plan.id} className={!plan.is_active ? 'opacity-60' : ''}>
-                        <CardHeader>
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <CardTitle className="text-lg flex items-center gap-2">
-                                {plan.name}
-                                {plan.is_free && <Badge variant="secondary">Gratuito</Badge>}
-                              </CardTitle>
-                              <CardDescription>{plan.description}</CardDescription>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Switch
-                                checked={plan.is_active}
-                                onCheckedChange={() => handleTogglePlanStatus(plan)}
-                              />
-                            </div>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          <div className="text-3xl font-bold text-primary">
-                            {plan.is_free ? 'Grátis' : `R$ ${plan.price.toFixed(2)}`}
-                            {!plan.is_free && <span className="text-sm font-normal text-muted-foreground">/mês</span>}
-                          </div>
-                          
-                          <ul className="space-y-2">
-                            {plan.features.map((feature, index) => (
-                              <li key={index} className="flex items-start gap-2 text-sm">
-                                <CheckCircle className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                                <span>{feature}</span>
-                              </li>
-                            ))}
-                          </ul>
-
-                          <div className="flex gap-2 pt-4 border-t">
-                            <Button variant="outline" size="sm" className="flex-1" onClick={() => openPlanDialog(plan)}>
-                              <Edit className="w-4 h-4 mr-1" />
-                              Editar
-                            </Button>
-                            <Button variant="destructive" size="sm" onClick={() => handleDeletePlan(plan.id)}>
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Plan Dialog */}
-            <Dialog open={showPlanDialog} onOpenChange={setShowPlanDialog}>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>{editingPlan ? 'Editar Plano' : 'Novo Plano'}</DialogTitle>
-                  <DialogDescription>
-                    {editingPlan ? 'Atualize as informações do plano' : 'Preencha as informações do novo plano'}
-                  </DialogDescription>
-                </DialogHeader>
-                <form onSubmit={handleSavePlan} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Nome do Plano</Label>
-                      <Input 
-                        value={planForm.name} 
-                        onChange={(e) => setPlanForm({ ...planForm, name: e.target.value })} 
-                        placeholder="Ex: Plano Premium"
-                        required 
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Preço Mensal (R$)</Label>
-                      <Input 
-                        type="number" 
-                        step="0.01" 
-                        value={planForm.price} 
-                        onChange={(e) => setPlanForm({ ...planForm, price: e.target.value })} 
-                        placeholder="0.00 para gratuito"
-                        required 
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Descrição</Label>
-                    <Textarea 
-                      value={planForm.description} 
-                      onChange={(e) => setPlanForm({ ...planForm, description: e.target.value })} 
-                      placeholder="Descreva os benefícios do plano..."
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Recursos (um por linha)</Label>
-                    <Textarea 
-                      value={planForm.features} 
-                      onChange={(e) => setPlanForm({ ...planForm, features: e.target.value })} 
-                      rows={5}
-                      placeholder="Perfil verificado&#10;Cupons ilimitados&#10;Suporte prioritário"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={planForm.is_active}
-                      onCheckedChange={(checked) => setPlanForm({ ...planForm, is_active: checked })}
-                    />
-                    <Label>Plano ativo</Label>
-                  </div>
-                  <DialogFooter>
-                    <Button type="button" variant="outline" onClick={() => setShowPlanDialog(false)}>
-                      Cancelar
-                    </Button>
-                    <Button type="submit">
-                      {editingPlan ? 'Atualizar' : 'Criar Plano'}
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </TabsContent>
-        </Tabs>
-      </main>
-    </div>
+        {renderContent()}
+      </div>
+    </DashboardWithSidebar>
   );
 };
 

@@ -256,6 +256,7 @@ export type Database = {
       patient_profiles: {
         Row: {
           address: string | null
+          avatar_url: string | null
           birth_date: string | null
           city: string | null
           cpf: string
@@ -270,6 +271,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          avatar_url?: string | null
           birth_date?: string | null
           city?: string | null
           cpf: string
@@ -284,6 +286,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          avatar_url?: string | null
           birth_date?: string | null
           city?: string | null
           cpf?: string
@@ -457,6 +460,7 @@ export type Database = {
           approval_status: Database["public"]["Enums"]["approval_status"]
           approved_at: string | null
           approved_by: string | null
+          avatar_url: string | null
           city: string | null
           clinic_address: string | null
           clinic_name: string | null
@@ -482,6 +486,7 @@ export type Database = {
           approval_status?: Database["public"]["Enums"]["approval_status"]
           approved_at?: string | null
           approved_by?: string | null
+          avatar_url?: string | null
           city?: string | null
           clinic_address?: string | null
           clinic_name?: string | null
@@ -507,6 +512,7 @@ export type Database = {
           approval_status?: Database["public"]["Enums"]["approval_status"]
           approved_at?: string | null
           approved_by?: string | null
+          avatar_url?: string | null
           city?: string | null
           clinic_address?: string | null
           clinic_name?: string | null

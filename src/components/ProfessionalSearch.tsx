@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Search, MapPin, Clock, User, CheckCircle2, Stethoscope } from 'lucide-react';
 import {
   Select,
@@ -20,6 +21,7 @@ interface Professional {
   specialty: string;
   city: string | null;
   state: string | null;
+  avatar_url: string | null;
   approval_status: 'approved' | 'pending' | 'rejected';
   profession?: {
     name: string;
@@ -82,6 +84,7 @@ const ProfessionalSearch = ({ onSelectProfessional }: ProfessionalSearchProps) =
         specialty,
         city,
         state,
+        avatar_url,
         approval_status,
         profession:professions (name)
       `)
@@ -204,7 +207,13 @@ const ProfessionalSearch = ({ onSelectProfessional }: ProfessionalSearchProps) =
             return (
               <Card key={professional.id} className={`hover:shadow-lg transition-shadow ${!isApproved ? 'border-amber-300/50' : 'border-primary/30'}`}>
                 <CardHeader>
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-4">
+                    <Avatar className="h-14 w-14">
+                      <AvatarImage src={professional.avatar_url || undefined} alt={professional.full_name} />
+                      <AvatarFallback className="bg-primary/10 text-primary">
+                        {professional.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <CardTitle className="text-lg">{professional.full_name}</CardTitle>
@@ -239,7 +248,7 @@ const ProfessionalSearch = ({ onSelectProfessional }: ProfessionalSearchProps) =
 
                   {isApproved && professionalOfferings.length > 0 && (
                     <div className="text-sm text-muted-foreground">
-                      <span className="font-medium">{professionalOfferings.length}</span> serviço(s) disponível(is)
+                      <span className="font-medium">{professionalOfferings.length}</span> programa(s) de atendimento
                     </div>
                   )}
 
@@ -262,7 +271,7 @@ const ProfessionalSearch = ({ onSelectProfessional }: ProfessionalSearchProps) =
                           size="sm"
                           onClick={() => onSelectProfessional?.(professional.id)}
                         >
-                          Ver Serviços
+                          Ver Programas
                         </Button>
                       </>
                     ) : (
