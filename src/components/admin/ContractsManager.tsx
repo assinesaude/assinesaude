@@ -59,18 +59,19 @@ const ContractsManager = () => {
 
   const fetchContracts = async () => {
     setLoading(true);
-    const { data, error } = await (supabase
-      .from('contract_templates' as any)
+    const { data, error } = await supabase
+      .from('contract_templates')
       .select('*')
-      .order('type', { ascending: true }) as any);
+      .order('type', { ascending: true });
 
     if (error) {
       console.error('Error fetching contracts:', error);
       toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível carregar os contratos.' });
     } else if (data) {
-      setContracts(data.map((c: any) => ({
+      setContracts(data.map((c) => ({
         ...c,
-        variables: Array.isArray(c.variables) ? c.variables : JSON.parse(c.variables || '[]')
+        type: c.type as 'platform' | 'service',
+        variables: Array.isArray(c.variables) ? c.variables as string[] : []
       })));
     }
     setLoading(false);
@@ -111,8 +112,8 @@ const ContractsManager = () => {
     const variables = extractVariables(form.content);
 
     if (editingContract) {
-      const { error } = await (supabase
-        .from('contract_templates' as any)
+      const { error } = await supabase
+        .from('contract_templates')
         .update({
           name: form.name,
           description: form.description,
@@ -121,7 +122,7 @@ const ContractsManager = () => {
           variables: variables,
           is_active: form.is_active,
         })
-        .eq('id', editingContract.id) as any);
+        .eq('id', editingContract.id);
 
       if (error) {
         toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível atualizar o contrato.' });
@@ -131,8 +132,8 @@ const ContractsManager = () => {
         fetchContracts();
       }
     } else {
-      const { error } = await (supabase
-        .from('contract_templates' as any)
+      const { error } = await supabase
+        .from('contract_templates')
         .insert({
           name: form.name,
           description: form.description,
@@ -140,7 +141,7 @@ const ContractsManager = () => {
           content: form.content,
           variables: variables,
           is_active: form.is_active,
-        }) as any);
+        });
 
       if (error) {
         toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível criar o contrato.' });
@@ -153,10 +154,10 @@ const ContractsManager = () => {
   };
 
   const handleDelete = async (id: string) => {
-    const { error } = await (supabase
-      .from('contract_templates' as any)
+    const { error } = await supabase
+      .from('contract_templates')
       .delete()
-      .eq('id', id) as any);
+      .eq('id', id);
 
     if (error) {
       toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível excluir o contrato.' });
