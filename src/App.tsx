@@ -16,6 +16,8 @@ import AdminDashboard from "./pages/dashboard/AdminDashboard";
 import ProfessionalDashboard from "./pages/dashboard/ProfessionalDashboard";
 import PatientDashboard from "./pages/dashboard/PatientDashboard";
 import ProfessionalProfile from "./pages/ProfessionalProfile";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +36,8 @@ const App = () => (
               <Route path="/cadastro/paciente" element={<RegisterPatient />} />
               <Route path="/cadastro/profissional" element={<RegisterProfessional />} />
               <Route path="/profissional/:slug" element={<ProfessionalProfile />} />
+              <Route path="/politica-de-privacidade" element={<PrivacyPolicy />} />
+              <Route path="/termos-de-uso" element={<TermsOfService />} />
               <Route path="/admin" element={
                 <ProtectedRoute requiredRole="admin">
                   <AdminDashboard />
