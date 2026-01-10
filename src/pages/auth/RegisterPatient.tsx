@@ -5,10 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import logoAssinesaude from '@/assets/logo-assinesaude.png';
 import { ArrowLeft, Upload, User } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import TermsOfServiceDialog from '@/components/TermsOfServiceDialog';
 
 const RegisterPatient = () => {
   const [formData, setFormData] = useState({
@@ -21,6 +23,7 @@ const RegisterPatient = () => {
   });
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -254,7 +257,29 @@ const RegisterPatient = () => {
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
-            <Button type="submit" className="w-full" disabled={loading}>
+            {/* Terms Acceptance */}
+            <div className="flex items-start space-x-2 w-full">
+              <Checkbox
+                id="terms"
+                checked={acceptedTerms}
+                onCheckedChange={(checked) => setAcceptedTerms(checked === true)}
+              />
+              <label
+                htmlFor="terms"
+                className="text-sm text-muted-foreground leading-tight cursor-pointer"
+              >
+                Li e aceito os{' '}
+                <TermsOfServiceDialog
+                  trigger={
+                    <button type="button" className="text-primary hover:underline font-medium">
+                      Termos de Uso
+                    </button>
+                  }
+                />
+              </label>
+            </div>
+
+            <Button type="submit" className="w-full" disabled={loading || !acceptedTerms}>
               {loading ? 'Cadastrando...' : 'Criar Conta'}
             </Button>
             <p className="text-sm text-center text-muted-foreground">
