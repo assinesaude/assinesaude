@@ -773,7 +773,6 @@ export type Database = {
         Returns: boolean
       }
       is_approved_professional: { Args: { _user_id: string }; Returns: boolean }
-      unaccent: { Args: { "": string }; Returns: string }
     }
     Enums: {
       app_role: "admin" | "professional" | "patient"
