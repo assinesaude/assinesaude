@@ -109,18 +109,11 @@ const AdminDashboard = () => {
 
   const sendApprovalEmail = async (professional: ProfessionalProfile, isApproved: boolean, reason?: string) => {
     try {
-      const { data: userData } = await supabase.auth.admin.getUserById(professional.user_id);
-      const email = userData?.user?.email;
-      
-      if (!email) {
-        console.log('Could not get user email, skipping notification');
-        return;
-      }
-
       const { error } = await supabase.functions.invoke('send-approval-email', {
         body: {
+          professionalId: professional.id,
           professionalName: professional.full_name,
-          professionalEmail: email,
+          userId: professional.user_id,
           isApproved,
           rejectionReason: reason,
         },

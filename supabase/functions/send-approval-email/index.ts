@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 
@@ -9,10 +10,12 @@ const corsHeaders = {
 };
 
 interface ApprovalEmailRequest {
+  professionalId: string;
   professionalName: string;
-  professionalEmail: string;
+  userId: string;
   isApproved: boolean;
   rejectionReason?: string;
+  professionalEmail?: string; // Optional - will be fetched if not provided
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -21,7 +24,36 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { professionalName, professionalEmail, isApproved, rejectionReason }: ApprovalEmailRequest = await req.json();
+    const requestData: ApprovalEmailRequest = await req.json();
+    const { professionalName, userId, isApproved, rejectionReason } = requestData;
+    let { professionalEmail } = requestData;
+
+    // If email not provided, fetch it using service role
+    if (!professionalEmail && userId) {
+      const supabaseAdmin = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      );
+
+      const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(userId);
+      
+      if (userError || !userData?.user?.email) {
+        console.log('Could not get user email:', userError?.message);
+        return new Response(
+          JSON.stringify({ error: 'Could not retrieve user email' }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+      
+      professionalEmail = userData.user.email;
+    }
+
+    if (!professionalEmail) {
+      return new Response(
+        JSON.stringify({ error: 'Email is required' }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
 
     let subject: string;
     let htmlContent: string;
@@ -85,7 +117,7 @@ const handler = async (req: Request): Promise<Response> => {
               <p><strong>Equipe AssineSaúde</strong></p>
             </div>
             <div class="footer">
-              <p>© 2024 AssineSaúde. Todos os direitos reservados.</p>
+              <p>© 2026 AssineSaúde. Todos os direitos reservados.</p>
               <p>Este email foi enviado porque você se cadastrou em nossa plataforma.</p>
             </div>
           </div>
@@ -138,7 +170,7 @@ const handler = async (req: Request): Promise<Response> => {
               <p><strong>Equipe AssineSaúde</strong></p>
             </div>
             <div class="footer">
-              <p>© 2024 AssineSaúde. Todos os direitos reservados.</p>
+              <p>© 2026 AssineSaúde. Todos os direitos reservados.</p>
             </div>
           </div>
         </body>
@@ -172,10 +204,11 @@ const handler = async (req: Request): Promise<Response> => {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error in send-approval-email function:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }
