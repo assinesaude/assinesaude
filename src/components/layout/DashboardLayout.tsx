@@ -62,6 +62,7 @@ const adminMenuItems: MenuItem[] = [
 
 const professionalMenuItems: MenuItem[] = [
   { title: 'Meus Programas', icon: Package, value: 'offerings' },
+  { title: 'Meu Perfil', icon: Users, value: 'profile' },
   { title: 'Meus Cupons', icon: Ticket, value: 'coupons' },
   { title: 'Planos B2B', icon: CreditCard, value: 'plans' },
 ];
