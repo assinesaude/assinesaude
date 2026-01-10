@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Search, MapPin, Clock, User, CheckCircle2, AlertCircle, Stethoscope } from 'lucide-react';
+import { Search, MapPin, Clock, User, CheckCircle2, Stethoscope } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -73,7 +73,7 @@ const ProfessionalSearch = ({ onSelectProfessional }: ProfessionalSearchProps) =
       setProfessions(professionsData);
     }
 
-    // Fetch approved professionals
+    // Fetch ALL professionals (not just approved)
     const { data: professionalsData } = await supabase
       .from('professional_profiles')
       .select(`
@@ -85,7 +85,7 @@ const ProfessionalSearch = ({ onSelectProfessional }: ProfessionalSearchProps) =
         approval_status,
         profession:professions (name)
       `)
-      .eq('approval_status', 'approved');
+      .in('approval_status', ['approved', 'pending']);
 
     if (professionalsData) {
       const formattedProfessionals = professionalsData.map(p => ({
@@ -199,25 +199,33 @@ const ProfessionalSearch = ({ onSelectProfessional }: ProfessionalSearchProps) =
             const lowestPrice = professionalOfferings.length > 0
               ? Math.min(...professionalOfferings.map(o => o.price))
               : null;
+            const isApproved = professional.approval_status === 'approved';
 
             return (
-              <Card key={professional.id} className="hover:shadow-lg transition-shadow">
+              <Card key={professional.id} className={`hover:shadow-lg transition-shadow ${!isApproved ? 'border-amber-300/50' : 'border-primary/30'}`}>
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <CardTitle className="text-lg">{professional.full_name}</CardTitle>
-                        {professional.approval_status === 'approved' ? (
-                          <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />
-                        ) : (
-                          <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0" />
-                        )}
                       </div>
                       <CardDescription>
                         {professional.profession?.name}
                       </CardDescription>
                     </div>
                   </div>
+                  {/* Status Badge */}
+                  {isApproved ? (
+                    <Badge className="bg-primary text-primary-foreground gap-1 w-fit">
+                      <CheckCircle2 className="w-3 h-3" />
+                      Verificado
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="border-amber-500 text-amber-600 gap-1 w-fit">
+                      <Clock className="w-3 h-3" />
+                      Aguardando Verificação
+                    </Badge>
+                  )}
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <Badge variant="secondary">{professional.specialty}</Badge>
@@ -229,31 +237,39 @@ const ProfessionalSearch = ({ onSelectProfessional }: ProfessionalSearchProps) =
                     </div>
                   )}
 
-                  {professionalOfferings.length > 0 && (
+                  {isApproved && professionalOfferings.length > 0 && (
                     <div className="text-sm text-muted-foreground">
                       <span className="font-medium">{professionalOfferings.length}</span> serviço(s) disponível(is)
                     </div>
                   )}
 
                   <div className="pt-4 border-t flex items-center justify-between">
-                    {lowestPrice !== null ? (
-                      <div>
-                        <div className="text-xs text-muted-foreground">A partir de</div>
-                        <div className="text-xl font-bold text-primary">
-                          R$ {lowestPrice.toFixed(2)}
-                        </div>
-                      </div>
+                    {isApproved ? (
+                      <>
+                        {lowestPrice !== null ? (
+                          <div>
+                            <div className="text-xs text-muted-foreground">A partir de</div>
+                            <div className="text-xl font-bold text-primary">
+                              R$ {lowestPrice.toFixed(2)}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-sm text-muted-foreground">
+                            Consulte valores
+                          </div>
+                        )}
+                        <Button 
+                          size="sm"
+                          onClick={() => onSelectProfessional?.(professional.id)}
+                        >
+                          Ver Serviços
+                        </Button>
+                      </>
                     ) : (
-                      <div className="text-sm text-muted-foreground">
-                        Consulte valores
+                      <div className="text-sm text-amber-600 italic">
+                        Profissional em processo de verificação
                       </div>
                     )}
-                    <Button 
-                      size="sm"
-                      onClick={() => onSelectProfessional?.(professional.id)}
-                    >
-                      Ver Serviços
-                    </Button>
                   </div>
                 </CardContent>
               </Card>
