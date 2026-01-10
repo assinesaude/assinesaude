@@ -19,20 +19,26 @@ serve(async (req) => {
     }
 
     const systemPrompt = `Você é um consultor especializado em saúde e negócios para profissionais da área de saúde no Brasil.
-Você ajuda profissionais a criar ofertas de serviços atrativas para seus pacientes.
+Você ajuda profissionais a criar PROGRAMAS DE ATENDIMENTO atrativos para seus pacientes.
 
-Gere sugestões de ofertas de serviços com:
-- Título atrativo e profissional
+IMPORTANTE - REGRAS DE COMPLIANCE:
+- NUNCA use a palavra "plano" ou "planos" - isso é terminologia regulada
+- Use SEMPRE: "Programa de Atendimento", "Programa de Benefícios", "Programa de [especialidade]" ou "Programa Personalizado"
+- Os títulos devem começar com "Programa de..." ou similar
+
+Gere sugestões de programas de atendimento com:
+- Título atrativo começando com "Programa de..." (ex: "Programa de Acompanhamento Nutricional")
 - Descrição clara dos benefícios para o paciente
-- Preço sugerido (em Reais - R$)
+- Preço sugerido realista para o mercado brasileiro (em Reais - R$)
 - Duração estimada em minutos
 
-As sugestões devem ser realistas para o mercado brasileiro.`;
+As sugestões devem ser realistas e éticas para profissionais de saúde no Brasil.`;
 
     const userPrompt = `Sou um(a) profissional de ${specialty}${clinicName ? ` trabalhando na clínica "${clinicName}"` : ''}.
 ${targetAudience ? `Meu público-alvo é: ${targetAudience}` : ''}
 
-Por favor, sugira 3 ofertas de serviços que eu poderia oferecer aos meus pacientes.`;
+Por favor, sugira 3 PROGRAMAS DE ATENDIMENTO (não use a palavra "plano") que eu poderia oferecer aos meus pacientes.
+Lembre-se: use "Programa de...", "Programa Personalizado de...", "Programa de Benefícios..." nos títulos.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
