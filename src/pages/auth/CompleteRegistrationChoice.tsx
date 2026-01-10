@@ -3,10 +3,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { User, Stethoscope } from 'lucide-react';
 import logoAssinesaude from '@/assets/logo-assinesaude.png';
-import GoogleLoginButton from '@/components/auth/GoogleLoginButton';
-import { Separator } from '@/components/ui/separator';
+import { useAuth } from '@/hooks/useAuth';
+import { Navigate } from 'react-router-dom';
 
-const RegisterChoice = () => {
+const CompleteRegistrationChoice = () => {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-2xl">
@@ -14,30 +28,14 @@ const RegisterChoice = () => {
           <img src={logoAssinesaude} alt="AssineSaúde" className="h-20" />
         </div>
         
-        <h1 className="text-3xl font-bold text-center mb-2">Crie sua conta</h1>
-        <p className="text-center text-muted-foreground mb-6">
-          Escolha o tipo de cadastro que melhor se encaixa para você
+        <h1 className="text-3xl font-bold text-center mb-2">Complete seu cadastro</h1>
+        <p className="text-center text-muted-foreground mb-8">
+          Escolha o tipo de conta para continuar
         </p>
-
-        {/* Google Login Option */}
-        <div className="flex justify-center mb-6">
-          <GoogleLoginButton mode="register" className="w-full max-w-sm" />
-        </div>
-
-        <div className="relative mb-6">
-          <div className="absolute inset-0 flex items-center">
-            <Separator className="w-full" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">
-              Ou cadastre-se com email
-            </span>
-          </div>
-        </div>
 
         <div className="grid md:grid-cols-2 gap-6">
           <Card className="hover:border-primary transition-colors cursor-pointer">
-            <Link to="/cadastro/paciente">
+            <Link to="/completar-cadastro/paciente">
               <CardHeader className="text-center">
                 <div className="mx-auto bg-accent rounded-full p-4 w-16 h-16 flex items-center justify-center mb-4">
                   <User className="w-8 h-8 text-accent-foreground" />
@@ -49,14 +47,14 @@ const RegisterChoice = () => {
               </CardHeader>
               <CardContent>
                 <Button className="w-full" variant="outline">
-                  Cadastrar como Paciente
+                  Continuar como Paciente
                 </Button>
               </CardContent>
             </Link>
           </Card>
 
           <Card className="hover:border-primary transition-colors cursor-pointer">
-            <Link to="/cadastro/profissional">
+            <Link to="/completar-cadastro/profissional">
               <CardHeader className="text-center">
                 <div className="mx-auto bg-primary/10 rounded-full p-4 w-16 h-16 flex items-center justify-center mb-4">
                   <Stethoscope className="w-8 h-8 text-primary" />
@@ -68,22 +66,15 @@ const RegisterChoice = () => {
               </CardHeader>
               <CardContent>
                 <Button className="w-full">
-                  Cadastrar como Profissional
+                  Continuar como Profissional
                 </Button>
               </CardContent>
             </Link>
           </Card>
         </div>
-
-        <p className="text-center text-sm text-muted-foreground mt-8">
-          Já tem uma conta?{' '}
-          <Link to="/login" className="text-primary hover:underline">
-            Entrar
-          </Link>
-        </p>
       </div>
     </div>
   );
 };
 
-export default RegisterChoice;
+export default CompleteRegistrationChoice;

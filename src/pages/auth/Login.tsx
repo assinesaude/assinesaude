@@ -7,6 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import logoAssinesaude from '@/assets/logo-assinesaude.png';
+import GoogleLoginButton from '@/components/auth/GoogleLoginButton';
+import { Separator } from '@/components/ui/separator';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -36,11 +38,33 @@ const Login = () => {
       if (roles?.some(r => r.role === 'admin')) {
         navigate('/admin');
       } else if (roles?.some(r => r.role === 'professional')) {
-        navigate('/profissional');
+        // Check if profile is complete
+        const { data: profile } = await supabase
+          .from('professional_profiles')
+          .select('id, full_name, cpf')
+          .eq('user_id', data.user.id)
+          .maybeSingle();
+
+        if (!profile || !profile.full_name || !profile.cpf) {
+          navigate('/completar-cadastro/profissional');
+        } else {
+          navigate('/profissional');
+        }
       } else if (roles?.some(r => r.role === 'patient')) {
-        navigate('/paciente');
+        // Check if profile is complete
+        const { data: profile } = await supabase
+          .from('patient_profiles')
+          .select('id, full_name, cpf')
+          .eq('user_id', data.user.id)
+          .maybeSingle();
+
+        if (!profile || !profile.full_name || !profile.cpf) {
+          navigate('/completar-cadastro/paciente');
+        } else {
+          navigate('/paciente');
+        }
       } else {
-        navigate('/');
+        navigate('/completar-cadastro');
       }
 
       toast({
@@ -72,6 +96,19 @@ const Login = () => {
         </CardHeader>
         <form onSubmit={handleLogin}>
           <CardContent className="space-y-4">
+            <GoogleLoginButton mode="login" className="w-full" />
+            
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <Separator className="w-full" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card px-2 text-muted-foreground">
+                  Ou continue com email
+                </span>
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
