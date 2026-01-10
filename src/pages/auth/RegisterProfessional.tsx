@@ -208,12 +208,14 @@ const RegisterProfessional = () => {
     const fileExt = file.name.split('.').pop();
     const fileName = `${userId}/${side}-${Date.now()}.${fileExt}`;
 
-    const { error: uploadError, data } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from('professional-documents')
       .upload(fileName, file);
 
     if (uploadError) throw uploadError;
 
+    // Store the path reference instead of public URL (bucket is now private)
+    // The URL will be generated as a signed URL when needed
     const { data: { publicUrl } } = supabase.storage
       .from('professional-documents')
       .getPublicUrl(fileName);

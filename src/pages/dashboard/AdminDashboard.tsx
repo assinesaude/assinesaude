@@ -26,6 +26,7 @@ import CouponsManager from '@/components/admin/CouponsManager';
 import CategoriesManager from '@/components/admin/CategoriesManager';
 import ContractsManager from '@/components/admin/ContractsManager';
 import { DashboardWithSidebar } from '@/components/layout/DashboardLayout';
+import SecureDocumentImage from '@/components/SecureDocumentImage';
 
 interface ProfessionalProfile {
   id: string;
@@ -288,19 +289,19 @@ const AdminDashboard = () => {
                           <div className="grid grid-cols-2 gap-4 py-4">
                             <div>
                               <p className="text-sm font-medium mb-2">Frente</p>
-                              {professional.document_front_url ? (
-                                <img src={professional.document_front_url} alt="Frente" className="w-full rounded-lg border" />
-                              ) : (
-                                <div className="bg-muted rounded-lg p-8 text-center text-sm">Não enviado</div>
-                              )}
+                              <SecureDocumentImage 
+                                url={professional.document_front_url} 
+                                alt="Frente" 
+                                className="w-full rounded-lg border" 
+                              />
                             </div>
                             <div>
                               <p className="text-sm font-medium mb-2">Verso</p>
-                              {professional.document_back_url ? (
-                                <img src={professional.document_back_url} alt="Verso" className="w-full rounded-lg border" />
-                              ) : (
-                                <div className="bg-muted rounded-lg p-8 text-center text-sm">Não enviado</div>
-                              )}
+                              <SecureDocumentImage 
+                                url={professional.document_back_url} 
+                                alt="Verso" 
+                                className="w-full rounded-lg border" 
+                              />
                             </div>
                           </div>
                         </DialogContent>
