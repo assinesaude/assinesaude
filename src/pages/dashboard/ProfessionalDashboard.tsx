@@ -218,7 +218,7 @@ const ProfessionalDashboard = () => {
                         Assistente IA
                       </CardTitle>
                       <CardDescription>
-                        Use inteligência artificial para criar programas de atendimento
+                        Crie ofertas de serviços com a ajuda da IA e venda assinaturas dos seus serviços com ofertas próprias. Tudo pelo AssineSaúde e o paciente paga a mensalidade da oferta que escolher com as opções do programa de benefícios que ele escolher. Sem intermediários. Sim, você pode!
                       </CardDescription>
                     </div>
                     <Button 
