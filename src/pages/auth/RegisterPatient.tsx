@@ -7,7 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import logoAssinesaude from '@/assets/logo-assinesaude.png';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Upload, User } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const RegisterPatient = () => {
   const [formData, setFormData] = useState({
@@ -18,6 +19,8 @@ const RegisterPatient = () => {
     cpf: '',
     phone: '',
   });
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -27,6 +30,40 @@ const RegisterPatient = () => {
       ...formData,
       [e.target.name]: e.target.value,
     });
+  };
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setAvatarFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const uploadAvatar = async (userId: string): Promise<string | null> => {
+    if (!avatarFile) return null;
+    
+    const fileExt = avatarFile.name.split('.').pop();
+    const fileName = `${userId}/avatar-${Date.now()}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('professional-documents')
+      .upload(fileName, avatarFile);
+
+    if (uploadError) {
+      console.error('Avatar upload error:', uploadError);
+      return null;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('professional-documents')
+      .getPublicUrl(fileName);
+
+    return publicUrl;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -56,6 +93,9 @@ const RegisterPatient = () => {
       if (authError) throw authError;
 
       if (authData.user) {
+        // Upload avatar if provided
+        const avatarUrl = await uploadAvatar(authData.user.id);
+
         // Create patient profile
         const { error: profileError } = await supabase
           .from('patient_profiles')
@@ -64,6 +104,7 @@ const RegisterPatient = () => {
             full_name: formData.fullName,
             cpf: formData.cpf,
             phone: formData.phone,
+            avatar_url: avatarUrl,
           });
 
         if (profileError) throw profileError;
@@ -113,6 +154,34 @@ const RegisterPatient = () => {
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
+            {/* Avatar Upload */}
+            <div className="flex flex-col items-center gap-4">
+              <Avatar className="h-24 w-24">
+                <AvatarImage src={avatarPreview || undefined} />
+                <AvatarFallback className="bg-muted">
+                  <User className="h-12 w-12 text-muted-foreground" />
+                </AvatarFallback>
+              </Avatar>
+              <div className="relative">
+                <Input
+                  id="avatar"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarChange}
+                  className="hidden"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => document.getElementById('avatar')?.click()}
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Escolher Foto
+                </Button>
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="fullName">Nome Completo</Label>
               <Input
