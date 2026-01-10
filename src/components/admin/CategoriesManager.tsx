@@ -50,11 +50,11 @@ const CategoriesManager = () => {
   const fetchCategories = async () => {
     setLoading(true);
     const { data } = await supabase
-      .from('activity_categories' as any)
+      .from('activity_categories')
       .select('id, name, icon_url, display_order, is_active')
       .order('display_order');
     
-    if (data) setCategories(data as unknown as Category[]);
+    if (data) setCategories(data);
     setLoading(false);
   };
 
@@ -86,7 +86,7 @@ const CategoriesManager = () => {
 
     if (editingCategory) {
       const { error } = await supabase
-        .from('activity_categories' as any)
+        .from('activity_categories')
         .update({
           name: form.name,
           icon_url: form.icon_url,
@@ -103,7 +103,7 @@ const CategoriesManager = () => {
       }
     } else {
       const { error } = await supabase
-        .from('activity_categories' as any)
+        .from('activity_categories')
         .insert({
           name: form.name,
           icon_url: form.icon_url,
@@ -122,7 +122,7 @@ const CategoriesManager = () => {
 
   const handleDelete = async (id: string) => {
     const { error } = await supabase
-      .from('activity_categories' as any)
+      .from('activity_categories')
       .delete()
       .eq('id', id);
 
@@ -136,7 +136,7 @@ const CategoriesManager = () => {
 
   const handleToggleStatus = async (category: Category) => {
     const { error } = await supabase
-      .from('activity_categories' as any)
+      .from('activity_categories')
       .update({ is_active: !category.is_active })
       .eq('id', category.id);
 

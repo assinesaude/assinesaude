@@ -17,7 +17,7 @@ const ActivityCategories = () => {
     const fetchCategories = async () => {
       try {
         const { data, error } = await supabase
-          .from('activity_categories' as any)
+          .from('activity_categories')
           .select('id, name, icon_url, display_order')
           .eq('is_active', true)
           .order('display_order');
@@ -27,7 +27,7 @@ const ActivityCategories = () => {
           return;
         }
         
-        if (data) setCategories(data as unknown as Category[]);
+        if (data) setCategories(data);
       } catch (error) {
         console.error('Error:', error);
       } finally {
