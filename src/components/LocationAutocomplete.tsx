@@ -1,8 +1,26 @@
 import { useState, useEffect, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { MapPin, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+interface IBGEState {
+  id: number;
+  sigla: string;
+  nome: string;
+}
+
+interface IBGECity {
+  id: number;
+  nome: string;
+  microrregiao: {
+    mesorregiao: {
+      UF: {
+        sigla: string;
+        nome: string;
+      };
+    };
+  };
+}
 
 interface LocationResult {
   id: string;
@@ -18,6 +36,10 @@ interface LocationAutocompleteProps {
   placeholder?: string;
   className?: string;
 }
+
+// Cache for IBGE data
+let cachedStates: IBGEState[] | null = null;
+let cachedCities: IBGECity[] | null = null;
 
 const LocationAutocomplete = ({
   value,
@@ -42,10 +64,27 @@ const LocationAutocomplete = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Fetch locations when query changes (min 3 chars)
+  // Fetch IBGE data on first use
+  const fetchIBGEData = async () => {
+    // Fetch states if not cached
+    if (!cachedStates) {
+      const statesRes = await fetch('https://servicodados.ibge.gov.br/api/v1/localidades/estados?orderBy=nome');
+      cachedStates = await statesRes.json();
+    }
+
+    // Fetch all cities if not cached (this is cached for performance)
+    if (!cachedCities) {
+      const citiesRes = await fetch('https://servicodados.ibge.gov.br/api/v1/localidades/municipios?orderBy=nome');
+      cachedCities = await citiesRes.json();
+    }
+
+    return { states: cachedStates, cities: cachedCities };
+  };
+
+  // Fetch locations when query changes (min 2 chars)
   useEffect(() => {
-    const fetchLocations = async () => {
-      if (query.length < 3) {
+    const searchLocations = async () => {
+      if (query.length < 2) {
         setResults([]);
         setIsOpen(false);
         return;
@@ -54,53 +93,43 @@ const LocationAutocomplete = ({
       setLoading(true);
 
       try {
-        // Fetch states matching query
-        const { data: states } = await supabase
-          .from('brazilian_states')
-          .select('id, name, abbreviation')
-          .ilike('name', `%${query}%`)
-          .limit(5);
-
-        // Fetch cities matching query
-        const { data: cities } = await supabase
-          .from('brazilian_cities')
-          .select('id, name, state_id')
-          .ilike('name', `%${query}%`)
-          .limit(10);
-
+        const { states, cities } = await fetchIBGEData();
+        const normalizedQuery = query.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        
         const locationResults: LocationResult[] = [];
 
-        // Add states
+        // Search states
         if (states) {
-          states.forEach(state => {
+          const matchingStates = states.filter(state => {
+            const normalizedName = state.nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            const normalizedAbbr = state.sigla.toLowerCase();
+            return normalizedName.includes(normalizedQuery) || normalizedAbbr.includes(normalizedQuery);
+          }).slice(0, 5);
+
+          matchingStates.forEach(state => {
             locationResults.push({
-              id: state.id,
+              id: state.id.toString(),
               type: 'state',
-              name: state.name,
-              stateAbbr: state.abbreviation
+              name: state.nome,
+              stateAbbr: state.sigla
             });
           });
         }
 
-        // Add cities with state info
-        if (cities && cities.length > 0) {
-          // Get state info for cities
-          const stateIds = [...new Set(cities.map(c => c.state_id))];
-          const { data: cityStates } = await supabase
-            .from('brazilian_states')
-            .select('id, name, abbreviation')
-            .in('id', stateIds);
+        // Search cities
+        if (cities) {
+          const matchingCities = cities.filter(city => {
+            const normalizedName = city.nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            return normalizedName.includes(normalizedQuery);
+          }).slice(0, 15);
 
-          const stateMap = new Map(cityStates?.map(s => [s.id, s]) || []);
-
-          cities.forEach(city => {
-            const stateInfo = stateMap.get(city.state_id);
+          matchingCities.forEach(city => {
             locationResults.push({
-              id: city.id,
+              id: city.id.toString(),
               type: 'city',
-              name: city.name,
-              state: stateInfo?.name,
-              stateAbbr: stateInfo?.abbreviation
+              name: city.nome,
+              state: city.microrregiao.mesorregiao.UF.nome,
+              stateAbbr: city.microrregiao.mesorregiao.UF.sigla
             });
           });
         }
@@ -108,13 +137,13 @@ const LocationAutocomplete = ({
         setResults(locationResults);
         setIsOpen(locationResults.length > 0);
       } catch (error) {
-        console.error('Error fetching locations:', error);
+        console.error('Error fetching IBGE locations:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    const debounce = setTimeout(fetchLocations, 300);
+    const debounce = setTimeout(searchLocations, 300);
     return () => clearTimeout(debounce);
   }, [query]);
 
