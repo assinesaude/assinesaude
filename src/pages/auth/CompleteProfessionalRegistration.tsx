@@ -245,6 +245,7 @@ const CompleteProfessionalRegistration = () => {
 
     if (uploadError) throw uploadError;
 
+    // Store the path reference - the URL will be generated as signed URL when needed
     const { data: { publicUrl } } = supabase.storage
       .from('professional-documents')
       .getPublicUrl(fileName);
