@@ -1,18 +1,19 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Clock, CheckCircle, AlertCircle, Plus, Sparkles } from 'lucide-react';
+import { Clock, CheckCircle, AlertCircle, Plus, Sparkles, ExternalLink, Copy } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import CouponsManager from '@/components/admin/CouponsManager';
 import PricingPlans from '@/components/PricingPlans';
 import { DashboardWithSidebar } from '@/components/layout/DashboardLayout';
+import ProfileSocialLinksEditor from '@/components/professional/ProfileSocialLinksEditor';
 
 interface ProfessionalProfile {
   id: string;
@@ -22,6 +23,17 @@ interface ProfessionalProfile {
   avatar_url: string | null;
   approval_status: 'pending' | 'approved' | 'rejected';
   rejection_reason: string | null;
+  slug: string | null;
+  bio: string | null;
+  instagram_url: string | null;
+  facebook_url: string | null;
+  tiktok_url: string | null;
+  youtube_url: string | null;
+  kwai_url: string | null;
+  whatsapp_number: string | null;
+  telegram_url: string | null;
+  google_street_view_url: string | null;
+  google_my_business_url: string | null;
 }
 
 interface ServiceOffering {
@@ -60,6 +72,20 @@ const ProfessionalDashboard = () => {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<AISuggestion[]>([]);
   const [activeTab, setActiveTab] = useState('offerings');
+  const [savingProfile, setSavingProfile] = useState(false);
+  
+  const [socialLinks, setSocialLinks] = useState({
+    bio: '',
+    instagram_url: '',
+    facebook_url: '',
+    tiktok_url: '',
+    youtube_url: '',
+    kwai_url: '',
+    whatsapp_number: '',
+    telegram_url: '',
+    google_street_view_url: '',
+    google_my_business_url: '',
+  });
   
   const [newOffering, setNewOffering] = useState({
     title: '',
@@ -77,10 +103,14 @@ const ProfessionalDashboard = () => {
   const fetchData = async () => {
     setLoading(true);
 
-    // Fetch professional profile
+    // Fetch professional profile with social links
     const { data: profData, error: profError } = await supabase
       .from('professional_profiles')
-      .select('id, full_name, specialty, clinic_name, avatar_url, approval_status, rejection_reason')
+      .select(`
+        id, full_name, specialty, clinic_name, avatar_url, approval_status, rejection_reason,
+        slug, bio, instagram_url, facebook_url, tiktok_url, youtube_url, kwai_url,
+        whatsapp_number, telegram_url, google_street_view_url, google_my_business_url
+      `)
       .eq('user_id', user?.id)
       .maybeSingle();
 
@@ -90,6 +120,20 @@ const ProfessionalDashboard = () => {
       setProfile(profData);
 
       if (profData) {
+        // Set social links state
+        setSocialLinks({
+          bio: profData.bio || '',
+          instagram_url: profData.instagram_url || '',
+          facebook_url: profData.facebook_url || '',
+          tiktok_url: profData.tiktok_url || '',
+          youtube_url: profData.youtube_url || '',
+          kwai_url: profData.kwai_url || '',
+          whatsapp_number: profData.whatsapp_number || '',
+          telegram_url: profData.telegram_url || '',
+          google_street_view_url: profData.google_street_view_url || '',
+          google_my_business_url: profData.google_my_business_url || '',
+        });
+
         // Fetch service offerings
         const { data: offeringsData, error: offeringsError } = await supabase
           .from('service_offerings')
@@ -118,6 +162,53 @@ const ProfessionalDashboard = () => {
     }
 
     setLoading(false);
+  };
+
+  const handleSaveProfile = async () => {
+    if (!profile) return;
+    
+    setSavingProfile(true);
+    
+    const { error } = await supabase
+      .from('professional_profiles')
+      .update({
+        bio: socialLinks.bio || null,
+        instagram_url: socialLinks.instagram_url || null,
+        facebook_url: socialLinks.facebook_url || null,
+        tiktok_url: socialLinks.tiktok_url || null,
+        youtube_url: socialLinks.youtube_url || null,
+        kwai_url: socialLinks.kwai_url || null,
+        whatsapp_number: socialLinks.whatsapp_number || null,
+        telegram_url: socialLinks.telegram_url || null,
+        google_street_view_url: socialLinks.google_street_view_url || null,
+        google_my_business_url: socialLinks.google_my_business_url || null,
+      })
+      .eq('id', profile.id);
+    
+    if (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Erro',
+        description: 'Não foi possível salvar o perfil.',
+      });
+    } else {
+      toast({
+        title: 'Perfil salvo!',
+        description: 'Suas informações foram atualizadas com sucesso.',
+      });
+      fetchData();
+    }
+    
+    setSavingProfile(false);
+  };
+
+  const copyProfileLink = () => {
+    const url = `${window.location.origin}/profissional/${profile?.slug || profile?.id}`;
+    navigator.clipboard.writeText(url);
+    toast({
+      title: 'Link copiado!',
+      description: 'O link do seu perfil foi copiado para a área de transferência.',
+    });
   };
 
   const handleCreateOffering = async (e: React.FormEvent) => {
@@ -378,6 +469,64 @@ const ProfessionalDashboard = () => {
                 ))}
               </div>
             )}
+          </div>
+        );
+      
+      case 'profile':
+        return (
+          <div className="space-y-6">
+            {/* Public Profile Link */}
+            {isApproved && (
+              <Card className="border-primary/50 bg-primary/5">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ExternalLink className="w-5 h-5" />
+                    Sua Página Pública
+                  </CardTitle>
+                  <CardDescription>
+                    Compartilhe este link com seus pacientes para que eles vejam seu perfil e programas de atendimento
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      readOnly
+                      value={`${window.location.origin}/profissional/${profile?.slug || profile?.id}`}
+                      className="bg-background"
+                    />
+                    <Button variant="outline" onClick={copyProfileLink}>
+                      <Copy className="w-4 h-4 mr-2" />
+                      Copiar
+                    </Button>
+                    <Button asChild>
+                      <Link to={`/profissional/${profile?.slug || profile?.id}`} target="_blank">
+                        <ExternalLink className="w-4 h-4 mr-2" />
+                        Visualizar
+                      </Link>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Social Links Editor */}
+            <ProfileSocialLinksEditor
+              data={socialLinks}
+              onChange={setSocialLinks}
+            />
+            
+            <div className="flex justify-end">
+              <Button onClick={handleSaveProfile} disabled={savingProfile}>
+                {savingProfile ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-primary-foreground mr-2"></div>
+                    Salvando...
+                  </>
+                ) : (
+                  'Salvar Perfil'
+                )}
+              </Button>
+            </div>
           </div>
         );
       

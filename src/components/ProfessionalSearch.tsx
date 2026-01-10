@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Search, MapPin, Clock, User, CheckCircle2, Stethoscope } from 'lucide-react';
+import { Search, MapPin, Clock, User, CheckCircle2, Stethoscope, ExternalLink } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -269,9 +270,12 @@ const ProfessionalSearch = ({ onSelectProfessional }: ProfessionalSearchProps) =
                         )}
                         <Button 
                           size="sm"
-                          onClick={() => onSelectProfessional?.(professional.id)}
+                          asChild
                         >
-                          Ver Programas
+                          <Link to={`/profissional/${professional.id}`}>
+                            <ExternalLink className="w-4 h-4 mr-1" />
+                            Ver Perfil
+                          </Link>
                         </Button>
                       </>
                     ) : (

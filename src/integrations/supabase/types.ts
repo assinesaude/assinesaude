@@ -461,6 +461,7 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           avatar_url: string | null
+          bio: string | null
           city: string | null
           clinic_address: string | null
           clinic_name: string | null
@@ -469,17 +470,27 @@ export type Database = {
           created_at: string
           document_back_url: string | null
           document_front_url: string | null
+          facebook_url: string | null
           full_name: string
+          google_my_business_url: string | null
+          google_street_view_url: string | null
           id: string
+          instagram_url: string | null
+          kwai_url: string | null
           phone: string | null
           profession_id: string | null
           professional_registration: string
           rejection_reason: string | null
+          slug: string | null
           specialty: string
           specialty_id: string | null
           state: string | null
+          telegram_url: string | null
+          tiktok_url: string | null
           updated_at: string
           user_id: string
+          whatsapp_number: string | null
+          youtube_url: string | null
           zip_code: string | null
         }
         Insert: {
@@ -487,6 +498,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           avatar_url?: string | null
+          bio?: string | null
           city?: string | null
           clinic_address?: string | null
           clinic_name?: string | null
@@ -495,17 +507,27 @@ export type Database = {
           created_at?: string
           document_back_url?: string | null
           document_front_url?: string | null
+          facebook_url?: string | null
           full_name: string
+          google_my_business_url?: string | null
+          google_street_view_url?: string | null
           id?: string
+          instagram_url?: string | null
+          kwai_url?: string | null
           phone?: string | null
           profession_id?: string | null
           professional_registration: string
           rejection_reason?: string | null
+          slug?: string | null
           specialty: string
           specialty_id?: string | null
           state?: string | null
+          telegram_url?: string | null
+          tiktok_url?: string | null
           updated_at?: string
           user_id: string
+          whatsapp_number?: string | null
+          youtube_url?: string | null
           zip_code?: string | null
         }
         Update: {
@@ -513,6 +535,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           avatar_url?: string | null
+          bio?: string | null
           city?: string | null
           clinic_address?: string | null
           clinic_name?: string | null
@@ -521,17 +544,27 @@ export type Database = {
           created_at?: string
           document_back_url?: string | null
           document_front_url?: string | null
+          facebook_url?: string | null
           full_name?: string
+          google_my_business_url?: string | null
+          google_street_view_url?: string | null
           id?: string
+          instagram_url?: string | null
+          kwai_url?: string | null
           phone?: string | null
           profession_id?: string | null
           professional_registration?: string
           rejection_reason?: string | null
+          slug?: string | null
           specialty?: string
           specialty_id?: string | null
           state?: string | null
+          telegram_url?: string | null
+          tiktok_url?: string | null
           updated_at?: string
           user_id?: string
+          whatsapp_number?: string | null
+          youtube_url?: string | null
           zip_code?: string | null
         }
         Relationships: [
@@ -740,6 +773,7 @@ export type Database = {
         Returns: boolean
       }
       is_approved_professional: { Args: { _user_id: string }; Returns: boolean }
+      unaccent: { Args: { "": string }; Returns: string }
     }
     Enums: {
       app_role: "admin" | "professional" | "patient"
