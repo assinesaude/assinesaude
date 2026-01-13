@@ -35,22 +35,29 @@ const Login = () => {
         .select('role')
         .eq('user_id', data.user.id);
 
+      // Admin users go directly to admin dashboard - no profile check needed
       if (roles?.some(r => r.role === 'admin')) {
         navigate('/admin');
-      } else if (roles?.some(r => r.role === 'professional')) {
+        return;
+      }
+      
+      if (roles?.some(r => r.role === 'professional')) {
         // Check if profile is complete
         const { data: profile } = await supabase
           .from('professional_profiles')
-          .select('id, full_name, cpf')
+          .select('id, full_name, cpf, profession_id')
           .eq('user_id', data.user.id)
           .maybeSingle();
 
-        if (!profile || !profile.full_name || !profile.cpf) {
+        if (!profile || !profile.full_name || !profile.cpf || !profile.profession_id) {
           navigate('/completar-cadastro/profissional');
         } else {
           navigate('/profissional');
         }
-      } else if (roles?.some(r => r.role === 'patient')) {
+        return;
+      }
+      
+      if (roles?.some(r => r.role === 'patient')) {
         // Check if profile is complete
         const { data: profile } = await supabase
           .from('patient_profiles')
@@ -63,9 +70,10 @@ const Login = () => {
         } else {
           navigate('/paciente');
         }
-      } else {
-        navigate('/completar-cadastro');
+        return;
       }
+      
+      navigate('/completar-cadastro');
 
       toast({
         title: 'Bem-vindo!',
