@@ -219,6 +219,13 @@ export type Database = {
             referencedRelation: "professional_profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "discount_coupons_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professional_profiles_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       message_recipients: {
@@ -634,6 +641,13 @@ export type Database = {
             referencedRelation: "professional_profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "professional_subscriptions_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professional_profiles_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       professions: {
@@ -702,6 +716,13 @@ export type Database = {
             referencedRelation: "professional_profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "service_offerings_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professional_profiles_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       specialties: {
@@ -762,7 +783,100 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      professional_profiles_public: {
+        Row: {
+          approval_status: Database["public"]["Enums"]["approval_status"] | null
+          avatar_url: string | null
+          bio: string | null
+          city: string | null
+          clinic_address: string | null
+          clinic_name: string | null
+          facebook_url: string | null
+          full_name: string | null
+          google_my_business_url: string | null
+          google_street_view_url: string | null
+          id: string | null
+          instagram_url: string | null
+          kwai_url: string | null
+          profession_id: string | null
+          slug: string | null
+          specialty: string | null
+          specialty_id: string | null
+          state: string | null
+          telegram_url: string | null
+          tiktok_url: string | null
+          whatsapp_number: string | null
+          youtube_url: string | null
+        }
+        Insert: {
+          approval_status?:
+            | Database["public"]["Enums"]["approval_status"]
+            | null
+          avatar_url?: string | null
+          bio?: string | null
+          city?: string | null
+          clinic_address?: string | null
+          clinic_name?: string | null
+          facebook_url?: string | null
+          full_name?: string | null
+          google_my_business_url?: string | null
+          google_street_view_url?: string | null
+          id?: string | null
+          instagram_url?: string | null
+          kwai_url?: string | null
+          profession_id?: string | null
+          slug?: string | null
+          specialty?: string | null
+          specialty_id?: string | null
+          state?: string | null
+          telegram_url?: string | null
+          tiktok_url?: string | null
+          whatsapp_number?: string | null
+          youtube_url?: string | null
+        }
+        Update: {
+          approval_status?:
+            | Database["public"]["Enums"]["approval_status"]
+            | null
+          avatar_url?: string | null
+          bio?: string | null
+          city?: string | null
+          clinic_address?: string | null
+          clinic_name?: string | null
+          facebook_url?: string | null
+          full_name?: string | null
+          google_my_business_url?: string | null
+          google_street_view_url?: string | null
+          id?: string | null
+          instagram_url?: string | null
+          kwai_url?: string | null
+          profession_id?: string | null
+          slug?: string | null
+          specialty?: string | null
+          specialty_id?: string | null
+          state?: string | null
+          telegram_url?: string | null
+          tiktok_url?: string | null
+          whatsapp_number?: string | null
+          youtube_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_profiles_profession_id_fkey"
+            columns: ["profession_id"]
+            isOneToOne: false
+            referencedRelation: "professions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_profiles_specialty_id_fkey"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       has_role: {
@@ -773,6 +887,16 @@ export type Database = {
         Returns: boolean
       }
       is_approved_professional: { Args: { _user_id: string }; Returns: boolean }
+      validate_coupon_code: {
+        Args: { coupon_code: string }
+        Returns: {
+          code: string
+          discount_type: string
+          discount_value: number
+          id: string
+          valid_until: string
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "professional" | "patient"
