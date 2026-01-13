@@ -20,14 +20,14 @@ export const ProtectedRoute = ({ children, requiredRole, requireApproval = false
     const checkProfileCompletion = async () => {
       if (!user || loading) return;
 
-      // Admin users don't need profile completion
+      // Admin users don't need profile completion - check first and exit early
       if (hasRole('admin')) {
         setProfileCheck('complete');
         return;
       }
 
-      // Check based on required role
-      if (requiredRole === 'professional' || hasRole('professional')) {
+      // Only check professional profile if user has professional role AND is accessing professional route
+      if (requiredRole === 'professional' && hasRole('professional')) {
         const { data: profile } = await supabase
           .from('professional_profiles')
           .select('id, full_name, cpf, profession_id')
@@ -38,9 +38,12 @@ export const ProtectedRoute = ({ children, requiredRole, requireApproval = false
           setProfileCheck('incomplete');
           return;
         }
+        setProfileCheck('complete');
+        return;
       }
 
-      if (requiredRole === 'patient' || hasRole('patient')) {
+      // Only check patient profile if user has patient role AND is accessing patient route
+      if (requiredRole === 'patient' && hasRole('patient')) {
         const { data: profile } = await supabase
           .from('patient_profiles')
           .select('id, full_name, cpf')
@@ -51,8 +54,11 @@ export const ProtectedRoute = ({ children, requiredRole, requireApproval = false
           setProfileCheck('incomplete');
           return;
         }
+        setProfileCheck('complete');
+        return;
       }
 
+      // For any other case (no specific role requirement), mark as complete
       setProfileCheck('complete');
     };
 
